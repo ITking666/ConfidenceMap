@@ -1,7 +1,18 @@
 #include "Confidence.h"
 
 
-
+/*************************************************
+Function: Confidence
+Description: constrcution function for Confidence class
+Calls: all member functions
+Called By: main function of project
+Table Accessed: none
+Table Updated: none
+Input: 
+Output: none
+Return: none
+Others: 
+*************************************************/
 Confidence::Confidence(const int & iGridNum)
 {
 
@@ -10,14 +21,39 @@ Confidence::Confidence(const int & iGridNum)
 }
 
 
-
+/*************************************************
+Function: ~Confidence
+Description: destrcution function for Confidence class
+Calls: all member functions
+Called By: main function of project
+Table Accessed: none
+Table Updated: none
+Input: 
+Output: none
+Return: none
+Others: 
+*************************************************/
 Confidence::~Confidence(){
 
 
 }
 
 
-//Gaussian Kernel Function
+/*************************************************
+Function: GaussianKernel
+Description: This is a Gaussian Kernel Function to smooth the distance value between two points
+Calls: Compute2Norm
+Called By: DistanceTerm
+Table Accessed: none
+Table Updated: none
+Input: oQueryPo - the query point (based point)
+       oTargerPo - the target point 
+	   sigma - the parameter that controls the affect radius of Gaussian Function, therefore the value
+	   of sigma is normally set as half of searched radius 
+Output: none
+Return: none
+Others: none
+*************************************************/
 inline float Confidence::GaussianKernel(const pcl::PointXYZ & oQueryPo, const pcl::PointXYZ & oTargerPo, float & sigma){
 
 	// k(|| x - xc || ) = exp{ -|| x - xc || ^ 2 / (2 * sigma^2) }
@@ -32,7 +68,19 @@ inline float Confidence::GaussianKernel(const pcl::PointXYZ & oQueryPo, const pc
 
 }
 
-//the 2 norm of a vector
+/*************************************************
+Function: Compute2Norm
+Description: compute the Euclidean distance between two points
+Calls: none
+Called By: GaussianKernel
+Table Accessed: none
+Table Updated: none
+Input: oQueryPo - the query point (based point)
+       oTargerPo - the target point 
+Output: none
+Return: none
+Others: This function is the same with ComputeEuclideanDis, but it is an online one
+*************************************************/
 inline float Confidence::Compute2Norm(const pcl::PointXYZ & oQueryPo, const pcl::PointXYZ & oTargerPo){
 
 	//compute the eucliden distance between the query point (robot) and target point (scanned point)
@@ -42,7 +90,19 @@ inline float Confidence::Compute2Norm(const pcl::PointXYZ & oQueryPo, const pcl:
 
 }
 
-//the 1 norm of a vector
+/*************************************************
+Function: Compute1Norm
+Description: compute the Euclidean distance between two points
+Calls: none
+Called By: GaussianKernel
+Table Accessed: none
+Table Updated: none
+Input: oQueryPo - the query point (based point)
+       oTargerPo - the target point 
+Output: the Euclidean distance value between two points
+Return: a distance value 
+Others: This function is the same with ComputeEuclideanDis, but it is an online one
+*************************************************/
 inline float Confidence::Compute1Norm(const pcl::PointXYZ & oQueryPo, const pcl::PointXYZ & oTargerPo){
 
 	return sqrt(pow(oQueryPo.x - oTargerPo.x, 2.0f)
@@ -51,7 +111,19 @@ inline float Confidence::Compute1Norm(const pcl::PointXYZ & oQueryPo, const pcl:
 
 }
 
-
+/*************************************************
+Function: ComputeCenter
+Description: compute the center point of a given point set with quired index
+Calls: none
+Called By: DistanceTerm
+Table Accessed: none
+Table Updated: none
+Input: vCloud - a 3D point clouds
+       vPointIdx - the point index vector indicates which point need to be computed 
+Output: centerpoint center point(position) of the queried point set
+Return: centerpoint
+Others: none
+*************************************************/
 pcl::PointXYZ Confidence::ComputeCenter(const PCLCloudXYZ & vCloud, const std::vector<int> & vPointIdx){
 
 	//define output
@@ -81,7 +153,12 @@ pcl::PointXYZ Confidence::ComputeCenter(const PCLCloudXYZ & vCloud, const std::v
 	return oCenter;
 
 }
-//reload
+
+/*************************************************
+Function: ComputeCenter - Reload
+Description:  compute the center point of a given point set 
+Input: vCloud - a 3D point clouds
+*************************************************/
 pcl::PointXYZ  Confidence::ComputeCenter(const PCLCloudXYZ & vCloud){
 
 	//define output
@@ -120,7 +197,19 @@ void Confidence::GetKnownGridIdx(const std::vector<int> & vKnownGridIdx){
 
 }
 
-//Compute Euclidean distance
+/*************************************************
+Function: ComputeEuclideanDis
+Description: compute the Euclidean distance between two points
+Calls: none
+Called By: main function of project or other classes
+Table Accessed: none
+Table Updated: none
+Input: oQueryPoint - the query point (based point)
+       oTargetPoint - the target point 
+Output: the distance value
+Return: a distance value
+Others: This function is the same with Compute1Norm, but it is a static one
+*************************************************/
 float Confidence::ComputeEuclideanDis(pcl::PointXYZ & oQueryPoint, pcl::PointXYZ & oTargetPoint) {
 
 	//compute the eucliden distance between the query point (robot) and target point (scanned point)
@@ -130,7 +219,23 @@ float Confidence::ComputeEuclideanDis(pcl::PointXYZ & oQueryPoint, pcl::PointXYZ
 
 }
 
-//Compute the distance term
+/*************************************************
+Function: DistanceTerm
+Description: the function is to compute the distance feature to the confidence value
+Calls: ComputeCenter
+       GaussianKernel
+Called By: main function of project 
+Table Accessed: none
+Table Updated: none
+Input: vReWardMap - the confidence map (grid map)
+	   oRobotPoint - the location of the robot  
+	   vNeighborGrids - the neighboring grids based on the input robot location
+	   vTravelCloud - the travelable point clouds (the ground point clouds)
+	   vGridTravelPsIdx - the index of point within each grid to total travelable point clouds  
+Output: the distance term value of each neighboring grid
+Return: a vector saves distance value of each neighboring grid
+Others: none
+*************************************************/
 std::vector<float> Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWardMap,
 	                                               const pcl::PointXYZ & oRobotPoint,
 	                                         const std::vector<int> & vNeighborGrids,
@@ -167,7 +272,23 @@ std::vector<float> Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWar
 }
 
 
-////Compute the distance
+/*************************************************
+Function: DistanceTerm
+Description: the function is to compute the distance feature to the confidence value
+Calls: ComputeCenter
+       GaussianKernel
+Called By: main function of project 
+Table Accessed: none
+Table Updated: none
+Input: vReWardMap - the confidence map (grid map)
+	   oRobotPoint - the location of the robot  
+	   vNeighborGrids - the neighboring grids based on the input robot location
+	   vTravelCloud - the travelable point clouds (the ground point clouds)
+	   vGridTravelPsIdx - the index of point within each grid to total travelable point clouds  
+Output: the distance term value of each neighboring grid
+Return: a vector saves distance value of each neighboring grid
+Others: none
+*************************************************/
 //std::vector<float> Confidence::BoundaryTerm(PCLCloudXYZ & vTravelCloud, PCLCloudXYZ & vBoundCloud, pcl::PointXYZ & oRobotPoint){
 //	
 //	//new output
@@ -207,7 +328,21 @@ std::vector<float> Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWar
 //}
 
 
-
+/*************************************************
+Function: FrontierTerm
+Description: the function is to compute the frontier feature, which is popular in roboticmethod
+Calls: none
+       none
+Called By: main function of project 
+Table Accessed: none
+Table Updated: none
+Input: vReWardMap - the confidence map (grid map)
+	   iQueryGrid - the grid at which the robot right now is
+	   vNeighborGrids - the neighboring grids index based on the robot grid
+Output: change the confidence value about frontier part
+Return: none
+Others: none
+*************************************************/
 void Confidence::FrontierTerm(std::vector<CofidenceValue> & vReWardMap, const int & iQueryGrid, const std::vector<int> & vNeighborGrids){
 
 	float fBoundaryRes = 0.0;
@@ -233,19 +368,45 @@ void Confidence::FrontierTerm(std::vector<CofidenceValue> & vReWardMap, const in
 
 }
 
-
-
-
-
-//Compute 
+/*************************************************
+Function: DistanceTerm
+Description: the function is to compute the distance feature to the confidence value
+Calls: ComputeCenter
+       GaussianKernel
+Called By: main function of project 
+Table Accessed: none
+Table Updated: none
+Input: vReWardMap - the confidence map (grid map)
+	   oRobotPoint - the location of the robot  
+	   vNeighborGrids - the neighboring grids based on the input robot location
+	   vTravelCloud - the travelable point clouds (the ground point clouds)
+	   vGridTravelPsIdx - the index of point within each grid to total travelable point clouds  
+Output: the distance term value of each neighboring grid
+Return: a vector saves distance value of each neighboring grid
+Others: none
+*************************************************/
 std::vector<float> Confidence::OcclusionTerm(PCLCloudXYZ & vTravelCloud, pcl::PointXYZ & oRobotPoint){
 
 
 }
 
-
-
-
+/*************************************************
+Function: DistanceTerm
+Description: the function is to compute the distance feature to the confidence value
+Calls: ComputeCenter
+       GaussianKernel
+Called By: main function of project 
+Table Accessed: none
+Table Updated: none
+Input: vReWardMap - the confidence map (grid map)
+	   oRobotPoint - the location of the robot  
+	   vNeighborGrids - the neighboring grids based on the input robot location
+	   vTravelCloud - the travelable point clouds (the ground point clouds)
+	   vGridTravelPsIdx - the index of point within each grid to total travelable point clouds  
+Output: the distance term value of each neighboring grid
+Return: a vector saves distance value of each neighboring grid
+Others: none
+*************************************************/
 void Confidence::ComputeTotalCoffidence(std::vector<CofidenceValue> & vReWardMap, const int & iQueryGrid){
 
 	vReWardMap[iQueryGrid].totalValue = vReWardMap[iQueryGrid].boundary * vReWardMap[iQueryGrid].visibility;
@@ -255,7 +416,18 @@ void Confidence::ComputeTotalCoffidence(std::vector<CofidenceValue> & vReWardMap
 
 
 
-
+/*************************************************
+Function: Normalization
+Description: normalize the input feature vector
+Calls: none
+Called By: major function
+Table Accessed: none
+Table Updated: none
+Input: vFeatures - a feature (feature value of each grid or feature value of each point)
+Output: change the feature value and limit it between 0 and 1
+Return: none
+Others: 0 <= vFeatures[i] <= 1
+*************************************************/
 void Confidence::Normalization(std::vector<float> & vFeatures){
 
 	//

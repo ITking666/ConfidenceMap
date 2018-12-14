@@ -9,7 +9,19 @@
 //modify distance features
 
 
+///************************************************************************///
+// a class denotes the Gaussian Process Regression algorithm
 
+// the implementation refers to this paper as below:
+// Ebden M. Gaussian Processes: A Quick Introduction[J]. Statistics, 2015, 36.
+
+// the raw version is based on https://github.com/jonfink/GP.git
+// Modified by Huang Pengdi 2018.10.09, Modified parts:
+// 1.Modify a lots of raw codes (The codes now is quite different from the raw one)
+// 2.Modify some mathmatics
+// 3.Add new functions
+// 4.Add new outputs
+///************************************************************************///
 class Confidence {
 
 	typedef pcl::PointCloud<pcl::PointXYZ> PCLCloudXYZ;
