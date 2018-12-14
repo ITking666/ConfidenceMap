@@ -2,25 +2,18 @@
 #define CONFIDENCE_H 
 #include"GridMap.h"
 
-//Version 1.1 2018.11.25
-//add the 2D map funtion to organize point cloud storage
-//Version 1.2 2018.12.13
-//change all calculation under the grid model
-//modify distance features
-
-
 ///************************************************************************///
-// a class denotes the Gaussian Process Regression algorithm
+// a class to implement the Gaussian Process Regression algorithm
+// created and edited by Huang Pengdi
 
-// the implementation refers to this paper as below:
-// Ebden M. Gaussian Processes: A Quick Introduction[J]. Statistics, 2015, 36.
-
-// the raw version is based on https://github.com/jonfink/GP.git
-// Modified by Huang Pengdi 2018.10.09, Modified parts:
-// 1.Modify a lots of raw codes (The codes now is quite different from the raw one)
-// 2.Modify some mathmatics
-// 3.Add new functions
-// 4.Add new outputs
+//Version 1.1 2018.11.25
+// - add the 2D map funtion to organize point cloud storage
+//Version 1.2 2018.12.13
+// - change all calculation under the grid model
+// - modify distance features
+//Version 1.3 2018.12.14
+// - add noting
+// - complete distance term
 ///************************************************************************///
 class Confidence {
 
@@ -32,12 +25,13 @@ class Confidence {
 public:
 
 	//constructor
-	Confidence(const int & iGridNum);
+	Confidence(float f_fSigma);
 	
 	//destructor
 	~Confidence();
 
-	void GetKnownGridIdx(const std::vector<int> & vKnownGridIdx);
+	//set the affect radius of Gaussian Kernel
+	void SetSigmaValue(const float & f_fSigma);
 
 	//*******************Mathematical Formula Part********************
 	
@@ -83,11 +77,10 @@ public:
 	//normalization of features
 	static void Normalization(std::vector<float> & vFeatures);
 
-	//map indicates known grids and unknown grids
-	std::vector<bool> MapKnownStatus;
-
 private:
 
+	//sigma parameter of Gaussian function in GaussianKernel()
+	float m_fSigma;
 
 };
 

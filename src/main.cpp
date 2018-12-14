@@ -123,7 +123,6 @@ int main() {
 		//find scanning region
 	    std::vector<int> vNearbyGrids = oGridMaper.SearchGrids(iRobotGridIdx, ROBOT_AFFECTDIS/0.5);
 		//get the known grid indexes
-	    oCofSolver.GetKnownGridIdx(vNearbyGrids);
 	    for (int i = 0; i != vNearbyGrids.size(); ++i)
 		     oGridMaper.m_vReWardMap[vNearbyGrids[i]].bKnownFlag = true;
 		oGridMaper.RegionGrow(vNearbyGrids);
@@ -161,9 +160,9 @@ int main() {
 	pcl::PointCloud<pcl::PointXYZ>::Ptr pBackgroundCloud(new pcl::PointCloud<pcl::PointXYZ>);
 	std::vector<int> vBGLabels;
 
-	for (int i = 0; i != oCofSolver.MapKnownStatus.size(); ++i) {
+	for (int i = 0; i != oGridMaper.m_vReWardMap.size(); ++i) {
 
-		if (oCofSolver.MapKnownStatus[i]) {
+		if (oGridMaper.m_vReWardMap[i].bKnownFlag) {
 
 			for (int j = 0; j != vGridObsPsIdx[i].size(); ++j) {
 				pBackgroundCloud->points.push_back(pAllCloud->points[vAllObstacleIdx[vGridObsPsIdx[i][j]]]);

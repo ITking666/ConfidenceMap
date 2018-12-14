@@ -315,23 +315,37 @@ std::vector<int> GridMap::NonMinimumSuppression(){
 
 }
 
+/*************************************************
+Function: RegionGrow
+Description: this function is to find the reachable grid based on current robot location
+Calls: none
+Called By: main function of project
+Table Accessed: none
+Table Updated: none
+Input: vNewScannedGrids - the neighboring grid of the current robot location
+Output: the reachable label of grid map. The grid labelled as 1 is reachable grid 
+Return: none
+Others: point with label 2 is queried and changed one by one during implementing function
+        point with label 0 will becomes point with label 2 after implementing function, this is to prepare next computing
+*************************************************/
 void GridMap::RegionGrow(const std::vector<int> & vNewScannedGrids){
 
     //status of grid in region grow
-	//-1 indicates the unknown grid
-	//0 indicates the untravelable region grid
-    //1 indicates the travelable region grid
+	//-1 indicates it is an unknown grid
+	//0 indicates this grid is ground but not reachable now
+    //1 indicates this grid is a travelable region grid
 	//2 is the new scanned grids (input) without growing
 	//3 indicates the grid has been computed
+	//4 indicates this grid is a off groud grid (not reachable forever)
 	
 	for(int i=0;i!=vNewScannedGrids.size();++i){
-		//if it is unknown
+		//if it is unknown (never be computed before)
 		if(m_vReWardMap[vNewScannedGrids[i]].travelable == -1){
 			//if it is a ground grid
 			if(m_vReWardMap[vNewScannedGrids[i]].iLabel == 2)
 		       m_vReWardMap[vNewScannedGrids[i]].travelable = 2;
 			else
-			   m_vReWardMap[vNewScannedGrids[i]].travelable = 0;
+			   m_vReWardMap[vNewScannedGrids[i]].travelable = 4;//off-ground
 		}
 	}
 
@@ -367,12 +381,13 @@ void GridMap::RegionGrow(const std::vector<int> & vNewScannedGrids){
 					 //find the nearboring grids
 					 std::vector<int> vNearGridIdx = SearchGrids(iCurIdx, 0.5);
 					 
-					 //
+					 //check neighboring grids
 					 for (int i = 0; i != vNearGridIdx.size(); ++i) {
 						 //if the near grid is new input
 						 if (m_vReWardMap[vNearGridIdx[i]].travelable == 2)
 							 vSeeds.push_back(vNearGridIdx[i]);
-						 //
+
+						 //if the near grid is reachable so that the query ground grids must be also reachable
 						 if (m_vReWardMap[vNearGridIdx[i]].travelable == 1)
 							 bTravelableFlag = 2;
 					 }//end for int i = 0;i!=vNearGridIdx.size();++i
@@ -387,5 +402,14 @@ void GridMap::RegionGrow(const std::vector<int> & vNewScannedGrids){
 	    }//end if m_vReWardMap[vNearGridIdx[i]].travelable == 2
 	
 	}//end for
+
+	//search the unreachable grid
+	//the reachable region is with respect to current query location
+	//because an unreachable grid may be reachable if the robot moves close
+	for (int i = 0; i != vNewScannedGrids.size(); ++i) {
+	    //prepare for further growing
+		if(m_vReWardMap[vNewScannedGrids[i]].travelable == 0)
+		   m_vReWardMap[vNewScannedGrids[i]].travelable = 2;
+	}
 
 }

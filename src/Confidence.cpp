@@ -4,19 +4,19 @@
 /*************************************************
 Function: Confidence
 Description: constrcution function for Confidence class
-Calls: all member functions
+Calls: SetSigmaValue
 Called By: main function of project
 Table Accessed: none
 Table Updated: none
-Input: 
+Input: f_fSigma - the parameter sigma of GaussianKernel
 Output: none
 Return: none
-Others: 
+Others: none
 *************************************************/
-Confidence::Confidence(const int & iGridNum)
+Confidence::Confidence(float f_fSigma)
 {
 
-	MapKnownStatus.resize(iGridNum, false);
+	SetSigmaValue(f_fSigma);
 
 }
 
@@ -28,16 +28,33 @@ Calls: all member functions
 Called By: main function of project
 Table Accessed: none
 Table Updated: none
-Input: 
+Input: none
 Output: none
 Return: none
-Others: 
+Others: none
 *************************************************/
 Confidence::~Confidence(){
 
 
 }
 
+/*************************************************
+Function: SetSigmaValue
+Description: set value to the private data member m_fSigma
+Calls: none
+Called By: Confidence
+Table Accessed: none
+Table Updated: none
+Input: f_fSigma - a given sigma value depends on the scanning region
+Output: none
+Return: none
+Others: none
+*************************************************/
+void Confidence::SetSigmaValue(const float & f_fSigma) {
+
+	m_fSigma = f_fSigma;
+
+}
 
 /*************************************************
 Function: GaussianKernel
@@ -190,12 +207,7 @@ pcl::PointXYZ  Confidence::ComputeCenter(const PCLCloudXYZ & vCloud){
 }
 
 
-void Confidence::GetKnownGridIdx(const std::vector<int> & vKnownGridIdx){
 
-	for (int i = 0; i != vKnownGridIdx.size(); ++i) 
-		MapKnownStatus[vKnownGridIdx[i]] = true;
-
-}
 
 /*************************************************
 Function: ComputeEuclideanDis
@@ -262,7 +274,7 @@ std::vector<float> Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWar
 		pcl::PointXYZ oOneCenter = ComputeCenter(vTravelCloud, vGridTravelPsIdx[vNeighborGrids[i]]);
 		vCenterPoints.push_back(oOneCenter);
 		if (!vGridTravelPsIdx[vNeighborGrids[i]].size())
-			oOneCenterGaussianKernel(oQueryPo, oOneCenter, sigma);
+			vDisPartValue[vNeighborGrids[i]] = GaussianKernel(oRobotPoint, oOneCenter, m_fSigma);
 	}
 
 	
@@ -343,16 +355,20 @@ Output: change the confidence value about frontier part
 Return: none
 Others: none
 *************************************************/
-void Confidence::FrontierTerm(std::vector<CofidenceValue> & vReWardMap, const int & iQueryGrid, const std::vector<int> & vNeighborGrids){
+void Confidence::FrontierTerm(std::vector<CofidenceValue> & vReWardMap, 
+	                                            const int & iQueryGrid,
+	                           const std::vector<int> & vNeighborGrids){
 
+	//variables
 	float fBoundaryRes = 0.0;
 	int iUnkownCount = 0;
 
+	//if it is a ground region
 	if (vReWardMap[iQueryGrid].iLabel == 2) {
 
 		for (int k = 0; k != vNeighborGrids.size(); ++k) {
-
-			if (!MapKnownStatus[vNeighborGrids[k]]) {
+			//count its neighboring unknown grids
+			if (!vReWardMap[vNeighborGrids[k]].bKnownFlag) {
 				iUnkownCount++;
 			}
 
@@ -360,7 +376,7 @@ void Confidence::FrontierTerm(std::vector<CofidenceValue> & vReWardMap, const in
 
 	}//end if vReWardMap
 
-	//if it is in boundary 
+	//it has a high value if it is far away from the boundary 
 	if (!iUnkownCount)
 		fBoundaryRes = 1.0;
 
@@ -387,6 +403,9 @@ Others: none
 *************************************************/
 std::vector<float> Confidence::OcclusionTerm(PCLCloudXYZ & vTravelCloud, pcl::PointXYZ & oRobotPoint){
 
+	std::vector<float> res;
+
+	return res;
 
 }
 
