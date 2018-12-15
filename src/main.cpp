@@ -113,6 +113,7 @@ int main() {
 
 	//find scanning region of each node (site)
 	while(iLoopCount!=1&&bOverFlag){
+
 		//judgement
 		bOverFlag = false;
 	    //robot location
@@ -192,7 +193,19 @@ int main() {
 	//	}
 	//}
 
-
+	std::vector<int> vLabels(pAllCloud->points.size(),0);
+	for(int i=0;i!= oGridMaper.m_vReWardMap.size();++i){
+		if(oGridMaper.m_vReWardMap[i].travelable==1){
+			for (int j = 0; j != vGridTravelPsIdx[i].size(); ++j)
+		        vLabels[vAllTravelIdx[vGridTravelPsIdx[i][j]]] = 1;
+	        for (int j = 0; j != vGridBoundPsIdx[i].size(); ++j)
+		        vLabels[vAllBoundIdx[vGridBoundPsIdx[i][j]]] = 1;
+	        for (int j = 0; j != vGridObsPsIdx[i].size(); ++j)
+		        vLabels[vAllObstacleIdx[vGridObsPsIdx[i][j]]] = 1;
+		
+		}
+		
+	}
 
 
 	std::vector<pcl::PointXYZ> vViewPoints;
@@ -205,11 +218,45 @@ int main() {
 	boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
 	HpdDisplay hpdisplay;
 
-	viewer = hpdisplay.ShowMixedResult(pKnownCloud, vConfidenceValue,
-		                               pBackgroundCloud, vBGLabels,
-		                               "redgreen", "assign");
-	//viewer = hpdisplay.Showclassification(pAllCloud, vLabels);
+	//viewer = hpdisplay.ShowMixedResult(pKnownCloud, vConfidenceValue,
+	//	                               pBackgroundCloud, vBGLabels,
+	//	                               "redgreen", "assign");
+	viewer = hpdisplay.Showclassification(pAllCloud, vLabels,"assign");
+	
+	//add simulated robot point for display
+	for (int i = 0; i != vViewPoints.size(); ++i) {
+		stringstream viewpointstream;
+		viewpointstream << i << "th_view";
+		std::string numlabel;
+		viewpointstream >> numlabel;
+		stringstream arrowstream;
+		arrowstream << i <<"_"<<i+1<<"_arrow";
+		std::string arrowNumLabel;
+		arrowstream >> arrowNumLabel;
+		vViewPoints[i].z = vViewPoints[i].z + ROBOT_HEIGHT;
+		viewer->addSphere(vViewPoints[i], 0.2, float(i + 1) / float(vViewPoints.size()), float(i + 1) / float(vViewPoints.size()), float(i + 1) / float(vViewPoints.size()), numlabel.c_str());
+		if(i)
+		viewer->addArrow(vViewPoints[i], vViewPoints[i-1], 0.0, 0.0, 1.0, false, arrowNumLabel.c_str());
+	}
 
+	for (int i = 0; i !=vUnVisitedView.size(); ++i) {
+		stringstream unviewpointstream;
+		unviewpointstream << i << "th_UnvisitedView";
+		std::string unviewpointnumlabel;
+		unviewpointstream >> unviewpointnumlabel;
+
+		stringstream unarrowstream;
+		unarrowstream << i << "_" << i + 1 << "_unArrow";
+		std::string unArrowNumLabel;
+		unarrowstream >> unArrowNumLabel;
+
+		vUnVisitedView[i].z = vUnVisitedView[i].z + ROBOT_HEIGHT;
+		viewer->addSphere(vUnVisitedView[i], 0.2, 1.0, 0.0, 0.0, unviewpointnumlabel.c_str());
+		if (i)
+		viewer->addArrow(vUnVisitedView[i], vUnVisitedView[i - 1], 1.0, 0.0, 0.0, false, unArrowNumLabel.c_str());
+		else
+		viewer->addArrow(vUnVisitedView[i], vViewPoints[vViewPoints.size()-1], 1.0, 0.0, 0.0, false, unArrowNumLabel.c_str());
+	}
 
 	while (!viewer->wasStopped())
 	{
