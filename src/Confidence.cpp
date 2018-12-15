@@ -267,17 +267,52 @@ std::vector<float> Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWar
 
 	std::vector<pcl::PointXYZ> vCenterPoints;///<center points of each neighboring grids
 	vCenterPoints.reserve(vNeighborGrids.size());
+	pcl::PointXYZ oZeroCenter;
+	oZeroCenter.x = 0.0;
+	oZeroCenter.y = 0.0;
+	oZeroCenter.z = 0.0;
+	//center of grid is x=0,y=0,z=0 if this grid is empty
+	for (int i = 0; i != vNeighborGrids.size(); ++i)
+		vCenterPoints.push_back(oZeroCenter);
 
-	//compute the center point 
+	//count how many neighboring grid has point 
+	float fNonEmptyNum = 0.0;
+	//define total center of whole neighborhood
+	pcl::PointXYZ oTotalCenter;
+	oTotalCenter.x = 0.0;
+	oTotalCenter.y = 0.0;
+	oTotalCenter.z = 0.0;
+
+	//**compute the distance part** 
 	for (int i = 0; i != vNeighborGrids.size(); ++i) {
 
-		pcl::PointXYZ oOneCenter = ComputeCenter(vTravelCloud, vGridTravelPsIdx[vNeighborGrids[i]]);
-		vCenterPoints.push_back(oOneCenter);
-		if (!vGridTravelPsIdx[vNeighborGrids[i]].size())
-			vDisPartValue[vNeighborGrids[i]] = GaussianKernel(oRobotPoint, oOneCenter, m_fSigma);
+		if (!vGridTravelPsIdx[vNeighborGrids[i]].size()) {
+		    //compute the center of each neighboring grid
+			vCenterPoints[i] = ComputeCenter(vTravelCloud, vGridTravelPsIdx[vNeighborGrids[i]]);
+
+		    //compute smooth distance using Gaussin Kernel based on the center point
+			//the empty grid has zero value in this term
+			vDisPartValue[vNeighborGrids[i]] = GaussianKernel(oRobotPoint, vCenterPoints[i], m_fSigma);
+
+			//compute the center
+			oTotalCenter.x = oTotalCenter.x + vCenterPoints[i].x;
+			oTotalCenter.y = oTotalCenter.y + vCenterPoints[i].y;
+			oTotalCenter.z = oTotalCenter.z + vCenterPoints[i].z;
+			fNonEmptyNum = fNonEmptyNum + 1.0;
+
+		}//end if (!vGridTravelPsIdx[vNeighborGrids[i]].size())
+
 	}
 
+	//**compute the center part**
+	oTotalCenter.x = oTotalCenter.x / fNonEmptyNum;
+	oTotalCenter.y = oTotalCenter.y / fNonEmptyNum;
+	oTotalCenter.z = oTotalCenter.z / fNonEmptyNum;
 	
+	//compute the total result
+
+
+
 	//output
 	return vDisRes;
 
