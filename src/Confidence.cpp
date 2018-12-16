@@ -57,6 +57,27 @@ void Confidence::SetSigmaValue(const float & f_fSigma) {
 }
 
 /*************************************************
+Function: VectorInnerProduct
+Description: This is an inner product operation of two vectors
+Calls: none
+Called By: DistanceTerm
+Table Accessed: none
+Table Updated: none
+Input: oAVec - vector A
+       oBVec - vector B
+Output: the inner product value of vector A and vector B
+Return: an inner product value
+Others: none
+*************************************************/
+float Confidence::VectorInnerProduct(const pcl::PointXYZ & oAVec,
+	                                 const pcl::PointXYZ & oBVec){
+
+	//a*b = xa*xb + ya*yb + za*zb
+	return oAVec.x * oBVec.x + oAVec.y * oBVec.y + oAVec.z * oBVec.z;
+
+}
+
+/*************************************************
 Function: GaussianKernel
 Description: This is a Gaussian Kernel Function to smooth the distance value between two points
 Calls: Compute2Norm
@@ -258,6 +279,7 @@ std::vector<float> Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWar
 	std::vector<float> vDisRes;
 	vDisRes.resize(vGridTravelPsIdx.size(),0.0);
 
+	//**********Measurement item************
 	//intermediate variables
 	std::vector<float> vDisPartValue;///<distance weight part 
 	vDisPartValue.resize(vGridTravelPsIdx.size(),0.0);
@@ -285,8 +307,8 @@ std::vector<float> Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWar
 
 	//**compute the distance part** 
 	for (int i = 0; i != vNeighborGrids.size(); ++i) {
-
-		if (!vGridTravelPsIdx[vNeighborGrids[i]].size()) {
+		//non-empty grid
+		if (vGridTravelPsIdx[vNeighborGrids[i]].size()) {
 		    //compute the center of each neighboring grid
 			vCenterPoints[i] = ComputeCenter(vTravelCloud, vGridTravelPsIdx[vNeighborGrids[i]]);
 
@@ -300,19 +322,52 @@ std::vector<float> Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWar
 			oTotalCenter.z = oTotalCenter.z + vCenterPoints[i].z;
 			fNonEmptyNum = fNonEmptyNum + 1.0;
 
-		}//end if (!vGridTravelPsIdx[vNeighborGrids[i]].size())
+		}//end if (vGridTravelPsIdx[vNeighborGrids[i]].size())
 
 	}
 
 	//**compute the center part**
+	//compute the center point 
 	oTotalCenter.x = oTotalCenter.x / fNonEmptyNum;
 	oTotalCenter.y = oTotalCenter.y / fNonEmptyNum;
 	oTotalCenter.z = oTotalCenter.z / fNonEmptyNum;
-	
-	//compute the total result
+    //compute the offset vector from query point to the center point 
+	pcl::PointXYZ oCenterOffVec;
+	oCenterOffVec.x = oTotalCenter.x - oRobotPoint.x;
+	oCenterOffVec.y = oTotalCenter.y - oRobotPoint.y;
+	oCenterOffVec.z = oTotalCenter.z - oRobotPoint.z;
+	//for each non-empty neighboring grid
+	for(int i=0;i!=vNeighborGrids.size();++i){
+		//non-empty
+		if (vGridTravelPsIdx[vNeighborGrids[i]].size()) {
+		//compute the grid direction vector from query point to the grid center point  
+		pcl::PointXYZ vGridVector;
+		vGridVector.x = vCenterPoints[i].x - oRobotPoint.x;
+		vGridVector.y = vCenterPoints[i].y - oRobotPoint.y;
+		vGridVector.z = vCenterPoints[i].z - oRobotPoint.z;
+		//
+	    vCenterPartValue[i] = VectorInnerProduct(oCenterOffVec,vGridVector);
+		}//end if (vGridTravelPsIdx[vNeighborGrids[i]].size())
+
+	}
 
 
+	//** compute the total result** 
+	//std::vector<float> vTotalDisValue;
+	//for(int i=0;i!=vNeighborGrids.size();++i){
+	//	vTotalDisValue.push_back(vCenterPartValue[i] * vDisPartValue[i]);
+    //}
 
+    //**********Incremental item************
+	//fd(p) = max(fd(pi))  
+	for(int i=0;i!=vNeighborGrids.size();++i){
+		//get maximum value of distance term
+		if(vReWardMap[vNeighborGrids[i]].boundary < vCenterPartValue[i] * vDisPartValue[i])
+		   vReWardMap[vNeighborGrids[i]].boundary = vCenterPartValue[i] * vDisPartValue[i];
+		//here is the case that only distance item works
+		//if(vReWardMap[vNeighborGrids[i]].bou7gggggggggggggggggndary < vDisPartValue[i])
+		//   vReWardMap[vNeighborGrids[i]].boundary = vDisPartValue[i];
+	}
 	//output
 	return vDisRes;
 

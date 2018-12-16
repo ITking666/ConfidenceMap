@@ -35,6 +35,8 @@ public:
 
 	//*******************Mathematical Formula Part********************
 	
+	inline float VectorInnerProduct(const pcl::PointXYZ & oAVec,const pcl::PointXYZ & oBVec);
+
 	//Gaussian Kernel Function
 	inline float GaussianKernel(const pcl::PointXYZ & oQueryPo, const pcl::PointXYZ & oTargerPo, float & sigma);
 
