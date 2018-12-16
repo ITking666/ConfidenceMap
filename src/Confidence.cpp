@@ -92,18 +92,20 @@ Output: none
 Return: none
 Others: none
 *************************************************/
-inline float Confidence::GaussianKernel(const pcl::PointXYZ & oQueryPo, const pcl::PointXYZ & oTargerPo, float & sigma){
+inline float Confidence::GaussianKernel(const pcl::PointXYZ & oQueryPo,
+	                                    const pcl::PointXYZ & oTargerPo, 
+	                                                      float & sigma){
 
 	// k(|| x - xc || ) = exp{ -|| x - xc || ^ 2 / (2 * sigma^2) }
 	//or k(|| x - xc || ) = exp{ -|| x - xc || ^ 2 / (sigma^2) }
 
 	//distance between two input vector
 	float fNormSquare = Compute2Norm(oQueryPo, oTargerPo);
-	//
+	
 	      fNormSquare = pow(fNormSquare, 2.0f);
 	//ouput equation result
-	return exp(-1.0f * fNormSquare)/pow(sigma,2.0f);
-
+	return exp(-1.0f * fNormSquare / pow(sigma,2.0f));
+	
 }
 
 /*************************************************
@@ -227,9 +229,6 @@ pcl::PointXYZ  Confidence::ComputeCenter(const PCLCloudXYZ & vCloud){
 
 }
 
-
-
-
 /*************************************************
 Function: ComputeEuclideanDis
 Description: compute the Euclidean distance between two points
@@ -269,15 +268,11 @@ Output: the distance term value of each neighboring grid
 Return: a vector saves distance value of each neighboring grid
 Others: none
 *************************************************/
-std::vector<float> Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWardMap,
+void Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWardMap,
 	                                               const pcl::PointXYZ & oRobotPoint,
 	                                         const std::vector<int> & vNeighborGrids,
 	                                                const PCLCloudXYZ & vTravelCloud,
 	                          const std::vector<std::vector<int>> & vGridTravelPsIdx){
-
-	//define output
-	std::vector<float> vDisRes;
-	vDisRes.resize(vGridTravelPsIdx.size(),0.0);
 
 	//**********Measurement item************
 	//intermediate variables
@@ -314,8 +309,8 @@ std::vector<float> Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWar
 
 		    //compute smooth distance using Gaussin Kernel based on the center point
 			//the empty grid has zero value in this term
-			vDisPartValue[vNeighborGrids[i]] = GaussianKernel(oRobotPoint, vCenterPoints[i], m_fSigma);
-
+			vDisPartValue[i] = GaussianKernel(oRobotPoint, vCenterPoints[i], m_fSigma);
+			std::cout << "dis: " << vDisPartValue[i] << std::endl;
 			//compute the center
 			oTotalCenter.x = oTotalCenter.x + vCenterPoints[i].x;
 			oTotalCenter.y = oTotalCenter.y + vCenterPoints[i].y;
@@ -324,8 +319,8 @@ std::vector<float> Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWar
 
 		}//end if (vGridTravelPsIdx[vNeighborGrids[i]].size())
 
-	}
-
+	}//end i
+	
 	//**compute the center part**
 	//compute the center point 
 	oTotalCenter.x = oTotalCenter.x / fNonEmptyNum;
@@ -336,6 +331,7 @@ std::vector<float> Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWar
 	oCenterOffVec.x = oTotalCenter.x - oRobotPoint.x;
 	oCenterOffVec.y = oTotalCenter.y - oRobotPoint.y;
 	oCenterOffVec.z = oTotalCenter.z - oRobotPoint.z;
+	
 	//for each non-empty neighboring grid
 	for(int i=0;i!=vNeighborGrids.size();++i){
 		//non-empty
@@ -349,7 +345,7 @@ std::vector<float> Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWar
 	    vCenterPartValue[i] = VectorInnerProduct(oCenterOffVec,vGridVector);
 		}//end if (vGridTravelPsIdx[vNeighborGrids[i]].size())
 
-	}
+	}//end i 
 
 
 	//** compute the total result** 
@@ -362,20 +358,89 @@ std::vector<float> Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWar
 	//fd(p) = max(fd(pi))  
 	for(int i=0;i!=vNeighborGrids.size();++i){
 		//get maximum value of distance term
-		if(vReWardMap[vNeighborGrids[i]].boundary < vCenterPartValue[i] * vDisPartValue[i])
-		   vReWardMap[vNeighborGrids[i]].boundary = vCenterPartValue[i] * vDisPartValue[i];
+		//if(vReWardMap[vNeighborGrids[i]].disTermVal < vCenterPartValue[i] * vDisPartValue[i])
+		//   vReWardMap[vNeighborGrids[i]].disTermVal = vCenterPartValue[i] * vDisPartValue[i];
 		//here is the case that only distance item works
-		//if(vReWardMap[vNeighborGrids[i]].bou7gggggggggggggggggndary < vDisPartValue[i])
-		//   vReWardMap[vNeighborGrids[i]].boundary = vDisPartValue[i];
+		if(vReWardMap[vNeighborGrids[i]].disTermVal < vDisPartValue[i])
+		   vReWardMap[vNeighborGrids[i]].disTermVal = vDisPartValue[i];
+		
 	}
-	//output
-	return vDisRes;
 
 }
 
+/*************************************************
+Function: QualityTerm
+Description: the function is to compute the distance feature to the confidence value
+Calls: ComputeCenter
+GaussianKernel
+Called By: main function of project
+Table Accessed: none
+Table Updated: none
+Input: vReWardMap - the confidence map (grid map)
+oRobotPoint - the location of the robot
+vNeighborGrids - the neighboring grids based on the input robot location
+vTravelCloud - the travelable point clouds (the ground point clouds)
+vGridTravelPsIdx - the index of point within each grid to total travelable point clouds
+Output: the distance term value of each neighboring grid
+Return: a vector saves distance value of each neighboring grid
+Others: none
+*************************************************/
+void Confidence::QualityTerm(std::vector<CofidenceValue> & vReWardMap,
+	                                const pcl::PointXYZ & oRobotPoint,
+	                          const std::vector<int> & vNeighborGrids,
+	                                 const PCLCloudXYZ & vTravelCloud,
+	           const std::vector<std::vector<int>> & vGridTravelPsIdx) {
+
+	//define output
+	std::vector<float> vDisRes;
+	vDisRes.resize(vGridTravelPsIdx.size(), 0.0);
+
+	//
+
+}
 
 /*************************************************
-Function: DistanceTerm
+Function: OcclusionTerm
+Description: the function is to compute the distance feature to the confidence value
+Calls: ComputeCenter
+GaussianKernel
+Called By: main function of project
+Table Accessed: none
+Table Updated: none
+Input: vReWardMap - the confidence map (grid map)
+oRobotPoint - the location of the robot
+vNeighborGrids - the neighboring grids based on the input robot location
+vTravelCloud - the travelable point clouds (the ground point clouds)
+vGridTravelPsIdx - the index of point within each grid to total travelable point clouds
+Output: the distance term value of each neighboring grid
+Return: a vector saves distance value of each neighboring grid
+Others: none
+*************************************************/
+void Confidence::OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
+	                                  const pcl::PointXYZ & oRobotPoint,
+	                            const std::vector<int> & vNeighborGrids,
+	                                   const PCLCloudXYZ & vTravelCloud,
+	             const std::vector<std::vector<int>> & vGridTravelPsIdx) {
+
+	//**********Measurement item************
+	//intermediate variables
+	std::vector<float> OccValue;///<distance weight part 
+	OccValue.resize(vGridTravelPsIdx.size(), 1.0);
+
+	//**********Incremental item************
+	//fd(p) = max(fd(pi))  
+	for (int i = 0; i != vNeighborGrids.size(); ++i) {
+		//get maximum value of distance term
+			vReWardMap[vNeighborGrids[i]].visibility = OccValue[i];
+		//here is the case that only distance item works
+		//if(vReWardMap[vNeighborGrids[i]].boundary < vDisPartValue[i])
+		//   vReWardMap[vNeighborGrids[i]].boundary = vDisPartValue[i];
+	}
+
+}
+
+/*************************************************
+Function: BoundaryTerm
 Description: the function is to compute the distance feature to the confidence value
 Calls: ComputeCenter
        GaussianKernel
@@ -445,37 +510,39 @@ Output: change the confidence value about frontier part
 Return: none
 Others: none
 *************************************************/
-void Confidence::FrontierTerm(std::vector<CofidenceValue> & vReWardMap, 
-	                                            const int & iQueryGrid,
-	                           const std::vector<int> & vNeighborGrids){
+//void Confidence::FrontierTerm(std::vector<CofidenceValue> & vReWardMap, 
+//	                                            const int & iQueryGrid,
+//	                           const std::vector<int> & vNeighborGrids){
+//
+//	//variables
+//	float fBoundaryRes = 0.0;
+//	int iUnkownCount = 0;
+//
+//	//if it is a ground region
+//	if (vReWardMap[iQueryGrid].iLabel == 2) {
+//
+//		for (int k = 0; k != vNeighborGrids.size(); ++k) {
+//			//count its neighboring unknown grids
+//			if (!vReWardMap[vNeighborGrids[k]].bKnownFlag) {
+//				iUnkownCount++;
+//			}
+//
+//		}//end for k
+//
+//	}//end if vReWardMap
+//
+//	//it has a high value if it is far away from the boundary 
+//	if (!iUnkownCount)
+//		fBoundaryRes = 1.0;
+//
+//	vReWardMap[iQueryGrid].boundary = fBoundaryRes;
+//
+//}
 
-	//variables
-	float fBoundaryRes = 0.0;
-	int iUnkownCount = 0;
 
-	//if it is a ground region
-	if (vReWardMap[iQueryGrid].iLabel == 2) {
-
-		for (int k = 0; k != vNeighborGrids.size(); ++k) {
-			//count its neighboring unknown grids
-			if (!vReWardMap[vNeighborGrids[k]].bKnownFlag) {
-				iUnkownCount++;
-			}
-
-		}//end for k
-
-	}//end if vReWardMap
-
-	//it has a high value if it is far away from the boundary 
-	if (!iUnkownCount)
-		fBoundaryRes = 1.0;
-
-	vReWardMap[iQueryGrid].boundary = fBoundaryRes;
-
-}
 
 /*************************************************
-Function: DistanceTerm
+Function: ComputeTotalCoffidence
 Description: the function is to compute the distance feature to the confidence value
 Calls: ComputeCenter
        GaussianKernel
@@ -491,34 +558,18 @@ Output: the distance term value of each neighboring grid
 Return: a vector saves distance value of each neighboring grid
 Others: none
 *************************************************/
-std::vector<float> Confidence::OcclusionTerm(PCLCloudXYZ & vTravelCloud, pcl::PointXYZ & oRobotPoint){
+void Confidence::ComputeTotalCoffidence(std::vector<CofidenceValue> & vReWardMap, 
+	                                     const std::vector<int> & vNeighborGrids){
 
-	std::vector<float> res;
-
-	return res;
-
-}
-
-/*************************************************
-Function: DistanceTerm
-Description: the function is to compute the distance feature to the confidence value
-Calls: ComputeCenter
-       GaussianKernel
-Called By: main function of project 
-Table Accessed: none
-Table Updated: none
-Input: vReWardMap - the confidence map (grid map)
-	   oRobotPoint - the location of the robot  
-	   vNeighborGrids - the neighboring grids based on the input robot location
-	   vTravelCloud - the travelable point clouds (the ground point clouds)
-	   vGridTravelPsIdx - the index of point within each grid to total travelable point clouds  
-Output: the distance term value of each neighboring grid
-Return: a vector saves distance value of each neighboring grid
-Others: none
-*************************************************/
-void Confidence::ComputeTotalCoffidence(std::vector<CofidenceValue> & vReWardMap, const int & iQueryGrid){
-
-	vReWardMap[iQueryGrid].totalValue = vReWardMap[iQueryGrid].boundary * vReWardMap[iQueryGrid].visibility;
+	//to each searched grid
+	for (int i = 0; i != vNeighborGrids.size(); ++i) {
+		//define query index
+		int iQueryIdx = vNeighborGrids[i];
+		//if this region is known
+		if (vReWardMap[iQueryIdx].bKnownFlag) {
+			vReWardMap[iQueryIdx].totalValue = vReWardMap[iQueryIdx].disTermVal * vReWardMap[iQueryIdx].visibility;
+		}//end if vReWardMap[iQueryIdx].bKnownFlag
+	}//end for i = 0
 
 }
 
@@ -539,7 +590,7 @@ Others: 0 <= vFeatures[i] <= 1
 *************************************************/
 void Confidence::Normalization(std::vector<float> & vFeatures){
 
-	//
+	//maximam and minimam
 	float fMaxValue = -FLT_MAX;
 	float fMinValue = FLT_MAX;
 

@@ -84,10 +84,10 @@ int main() {
 	std::vector<std::vector<int>> vGridTravelPsIdx;
 	std::vector<std::vector<int>> vGridObsPsIdx;
 
-	GridMap oGridMaper(0.5, 500.0,15.0,0.2);
+	GridMap oGridMaper(0.5, 500.0,15.0,0.6);
 	oGridMaper.InitializeMap();
 
-	Confidence oCofSolver(oGridMaper.m_vReWardMap.size());
+	Confidence oCofSolver(ROBOT_AFFECTDIS);
 
 	//map
 	oGridMaper.GenerateMap(vGridTravelPsIdx);
@@ -128,13 +128,9 @@ int main() {
 		     oGridMaper.m_vReWardMap[vNearbyGrids[i]].bKnownFlag = true;
 		oGridMaper.RegionGrow(vNearbyGrids);
 
-		//compute the features
-	    for (int i = 0; i != vNearbyGrids.size(); ++i) {
-		//**************Confidence Map*******************
-		     std::vector<int> vNearbyJudge = oGridMaper.SearchGrids(vNearbyGrids[i], 0.5);
-		     oCofSolver.FrontierTerm(oGridMaper.m_vReWardMap, vNearbyGrids[i], vNearbyJudge);
-		     oCofSolver.ComputeTotalCoffidence(oGridMaper.m_vReWardMap, vNearbyGrids[i]);
-	    }
+		oCofSolver.DistanceTerm(oGridMaper.m_vReWardMap, oRobot, vNearbyGrids, *pAllTravelCloud, vGridTravelPsIdx);
+		oCofSolver.OcclusionTerm(oGridMaper.m_vReWardMap, oRobot, vNearbyGrids, *pAllTravelCloud, vGridTravelPsIdx);
+		oCofSolver.ComputeTotalCoffidence(oGridMaper.m_vReWardMap, vNearbyGrids);
 	
 		//using the minimum suppression
 	    std::vector<int> vNodeGridIdxs = oGridMaper.NonMinimumSuppression();
@@ -218,10 +214,10 @@ int main() {
 	boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
 	HpdDisplay hpdisplay;
 
-	//viewer = hpdisplay.ShowMixedResult(pKnownCloud, vConfidenceValue,
-	//	                               pBackgroundCloud, vBGLabels,
-	//	                               "redgreen", "assign");
-	viewer = hpdisplay.Showclassification(pAllCloud, vLabels,"assign");
+	viewer = hpdisplay.ShowMixedResult(pKnownCloud, vConfidenceValue,
+		                               pBackgroundCloud, vBGLabels,
+		                               "redgreen", "assign");
+	//viewer = hpdisplay.Showclassification(pAllCloud, vLabels,"assign");
 	
 	//add simulated robot point for display
 	for (int i = 0; i != vViewPoints.size(); ++i) {

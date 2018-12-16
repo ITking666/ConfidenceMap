@@ -557,22 +557,22 @@ PointCloudViewerPtr HpdDisplay::Showfeatureresult(std::vector<Point3D> & point3d
     }
 		 
 switch(keynumber){
-	//******************模式1红绿变化显示
-case 0:{
+	//******************模式1灰白变化显示
+case 0: {
 	//点云上色
-	headcolor=colors[0];
-	tailcolor=colors[1];
+	headcolor = colors[0];
+	tailcolor = colors[1];
 	//相应背景颜色
-	backgroudcolor=colors[4];
+	backgroudcolor = colors[4];
 	break;
-	   }
-   //******************模式2灰白显示
-case 1:{
+}
+		//******************模式2红绿显示
+case 1: {
 	//点云上色
-	headcolor=colors[18];
-	tailcolor.r=0;tailcolor.g=255;tailcolor.b=0;
+	headcolor.r = 0; headcolor.g = 255; headcolor.b = 0;
+	tailcolor = colors[18];
 	//相应背景颜色
-	backgroudcolor=colors[0];
+	backgroudcolor = colors[0];
 	break;
 	   }
 	    //******************模式3红蓝显示
@@ -676,7 +676,7 @@ PointCloudViewerPtr HpdDisplay::Showfeatureresult(std::vector<Point3D> & point3d
 		}
 
 		switch (keynumber) {
-			//******************模式1红绿变化显示
+			//******************模式1灰白变化显示
 		case 0: {
 			//点云上色
 			headcolor = colors[0];
@@ -685,11 +685,11 @@ PointCloudViewerPtr HpdDisplay::Showfeatureresult(std::vector<Point3D> & point3d
 			backgroudcolor = colors[4];
 			break;
 		}
-				//******************模式2灰白显示
+				//******************模式2红绿显示
 		case 1: {
 			//点云上色
-			headcolor = colors[18];
-			tailcolor.r = 0; tailcolor.g = 255; tailcolor.b = 0;
+			headcolor.r = 0; headcolor.g = 255; headcolor.b = 0;
+			tailcolor = colors[18];
 			//相应背景颜色
 			backgroudcolor = colors[0];
 			break;
@@ -795,7 +795,7 @@ PointCloudViewerPtr HpdDisplay::Showfeatureresult(PointCloudXYZPtr & vCloud, std
 		}
 
 		switch (keynumber) {
-			//******************模式1红绿变化显示
+			//******************模式1灰白变化显示
 		case 0: {
 			//点云上色
 			headcolor = colors[0];
@@ -804,11 +804,11 @@ PointCloudViewerPtr HpdDisplay::Showfeatureresult(PointCloudXYZPtr & vCloud, std
 			backgroudcolor = colors[4];
 			break;
 		}
-				//******************模式2灰白显示
+				//******************模式2红绿显示
 		case 1: {
 			//点云上色
-			headcolor = colors[18];
-			tailcolor.r = 0; tailcolor.g = 255; tailcolor.b = 0;
+			headcolor.r = 0; headcolor.g = 255; headcolor.b = 0;
+			tailcolor = colors[18];
 			//相应背景颜色
 			backgroudcolor = colors[0];
 			break;
@@ -915,7 +915,7 @@ PointCloudViewerPtr HpdDisplay::Showfeatureresult(PointCloudXYZPtr & vCloud, std
 		}
 
 		switch (keynumber) {
-			//******************模式1红绿变化显示
+			//******************模式1灰白变化显示
 		case 0: {
 			//点云上色
 			headcolor = colors[0];
@@ -924,11 +924,11 @@ PointCloudViewerPtr HpdDisplay::Showfeatureresult(PointCloudXYZPtr & vCloud, std
 			backgroudcolor = colors[4];
 			break;
 		}
-				//******************模式2灰白显示
+				//******************模式2红绿显示
 		case 1: {
 			//点云上色
-			tailcolor = colors[18];
 			headcolor.r = 0; headcolor.g = 255; headcolor.b = 0;
+			tailcolor = colors[18];
 			//相应背景颜色
 			backgroudcolor = colors[0];
 			break;
@@ -1058,7 +1058,7 @@ PointCloudViewerPtr HpdDisplay::ShowMixedResult(const PointCloudXYZPtr & vCloud,
 		}
 
 		switch (keynumber) {
-			//******************模式1红绿变化显示
+			//******************模式1灰白变化显示
 		case 0: {
 			//点云上色
 			headcolor = colors[0];
@@ -1067,11 +1067,11 @@ PointCloudViewerPtr HpdDisplay::ShowMixedResult(const PointCloudXYZPtr & vCloud,
 			backgroudcolor = colors[4];
 			break;
 		}
-				//******************模式2灰白显示
+				//******************模式2红绿显示
 		case 1: {
 			//点云上色
-			headcolor = colors[18];
-			tailcolor.r = 0; tailcolor.g = 255; tailcolor.b = 0;
+			headcolor.r = 0; headcolor.g = 255; headcolor.b = 0;
+			tailcolor = colors[18];
 			//相应背景颜色
 			backgroudcolor = colors[0];
 			break;

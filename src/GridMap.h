@@ -19,6 +19,9 @@ struct CofidenceValue {
 	//boundary based term
 	float boundary;
 
+	//distance based term
+	float disTermVal;
+
 	//Weighted total of those two terms above
 	float totalValue;
 
@@ -38,6 +41,7 @@ struct CofidenceValue {
 	CofidenceValue() {
 
 		visibility = 1.0;
+		disTermVal = 0.0;
 		boundary = 0.0;
 		totalValue = 0.0;
 		travelable = -1;
