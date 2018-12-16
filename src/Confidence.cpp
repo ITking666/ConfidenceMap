@@ -310,7 +310,7 @@ void Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWardMap,
 		    //compute smooth distance using Gaussin Kernel based on the center point
 			//the empty grid has zero value in this term
 			vDisPartValue[i] = GaussianKernel(oRobotPoint, vCenterPoints[i], m_fSigma);
-			std::cout << "dis: " << vDisPartValue[i] << std::endl;
+			
 			//compute the center
 			oTotalCenter.x = oTotalCenter.x + vCenterPoints[i].x;
 			oTotalCenter.y = oTotalCenter.y + vCenterPoints[i].y;
@@ -565,10 +565,13 @@ void Confidence::ComputeTotalCoffidence(std::vector<CofidenceValue> & vReWardMap
 	for (int i = 0; i != vNeighborGrids.size(); ++i) {
 		//define query index
 		int iQueryIdx = vNeighborGrids[i];
-		//if this region is known
-		if (vReWardMap[iQueryIdx].bKnownFlag) {
-			vReWardMap[iQueryIdx].totalValue = vReWardMap[iQueryIdx].disTermVal * vReWardMap[iQueryIdx].visibility;
-		}//end if vReWardMap[iQueryIdx].bKnownFlag
+		//if this region is a ground point (this condition does not influence result)
+		//if (vReWardMap[iQueryIdx].iLabel == 2) {
+			//the grid is known
+			if(vReWardMap[iQueryIdx].bKnownFlag)
+			   vReWardMap[iQueryIdx].totalValue = vReWardMap[iQueryIdx].disTermVal * vReWardMap[iQueryIdx].visibility;
+			
+		//}//end if vReWardMap[iQueryIdx].iLabel == 2
 	}//end for i = 0
 
 }

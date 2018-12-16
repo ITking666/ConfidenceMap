@@ -273,6 +273,7 @@ std::vector<int> GridMap::NonMinimumSuppression(){
 			    if (!m_vReWardMap[i].bMinFlag) {
 				    //if it is small
 				    if (m_vReWardMap[i].totalValue < m_fMinThreshold){
+						
 				        vMinCandidates.push_back(i);
 			        }//end if m_vReWardMap[i].totalValue < m_fMinThreshold
 			    }//end if !m_vReWardMap[i].bMinFlag
@@ -290,15 +291,20 @@ std::vector<int> GridMap::NonMinimumSuppression(){
 			std::vector<int> vNeighborGrids = SearchGrids(iCurIdx, m_fMinRadiusNum);
 			//search each neighboring grid
 			for (int j = 0; j != vNeighborGrids.size(); ++j) {
-				//do not compare with itself(query grid)
-				if (iCurIdx != vNeighborGrids[j]) {
-					//compare the total value
-					if (m_vReWardMap[iCurIdx].totalValue <= m_vReWardMap[vNeighborGrids[j]].totalValue)
-					    vMinCandidStatus[vNeighborGrids[j]] = false;
-				    else 
-					    vMinCandidStatus[iCurIdx] = false;
-			    }
-			}//if
+				//the contrastive grid must be a travelable grid
+				//this is because the non-ground grid alawys has a zero total value
+				if(m_vReWardMap[vNeighborGrids[j]].travelable == 1){
+					
+				   //do not compare with itself(query grid)
+				   if (iCurIdx != vNeighborGrids[j]) {
+					   //compare the total value
+					   if (m_vReWardMap[iCurIdx].totalValue <= m_vReWardMap[vNeighborGrids[j]].totalValue)
+					       vMinCandidStatus[vNeighborGrids[j]] = false;
+				       else 
+					       vMinCandidStatus[iCurIdx] = false;
+			       }//if != vNeighborGrids[j]
+				}//end if(m_vReWardMap[iCurIdx].travelable == 1)
+			}//end for j
 		}//end if (vMinCandidates[vMinCandidates[i]])
 			m_vReWardMap[iCurIdx].bMinFlag = true;
 	}//end i != m_vReWardMap.size()

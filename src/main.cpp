@@ -112,14 +112,17 @@ int main() {
 	int iLoopCount = 0;
 
 	//find scanning region of each node (site)
-	while(iLoopCount!=1&&bOverFlag){
-
+	//while(iLoopCount!=2&&bOverFlag){
+    while(bOverFlag){
 		//judgement
 		bOverFlag = false;
 	    //robot location
-		if(iLoopCount)
+		if(iLoopCount){
 		   iRobotGridIdx = OLTSPSolver.m_vUnVisitNodeIdx[0];
-		 
+		   oRobot.x =  OLTSPSolver.m_vUnVisitCenters[0].x;
+		   oRobot.y =  OLTSPSolver.m_vUnVisitCenters[0].y;
+		   oRobot.z =  OLTSPSolver.m_vUnVisitCenters[0].z;
+		}
 		std::cout << "iRobotGridIdx: "<< iRobotGridIdx << std::endl;
 		//find scanning region
 	    std::vector<int> vNearbyGrids = oGridMaper.SearchGrids(iRobotGridIdx, ROBOT_AFFECTDIS/0.5);
@@ -134,18 +137,15 @@ int main() {
 	
 		//using the minimum suppression
 	    std::vector<int> vNodeGridIdxs = oGridMaper.NonMinimumSuppression();
-
+		
 		//OLTSP calculation
 	    OLTSPSolver.GetCurrentLocation(pAllTravelCloud, vGridTravelPsIdx, iRobotGridIdx);
 	    OLTSPSolver.GetNewNodes(pAllTravelCloud,vGridTravelPsIdx,vNodeGridIdxs);
 	    OLTSPSolver.GTR(oGridMaper.m_vReWardMap);
 
-		std::cout << "the number of new nodes: " << vNodeGridIdxs.size() << std::endl;
-
 	    iLoopCount = iLoopCount + 1;
 	    std::cout << "loops "<< iLoopCount << std::endl;
 
-		std::cout << "size: " << OLTSPSolver.m_vUnVisitNodeIdx.size() << std::endl;
 		if (OLTSPSolver.m_vUnVisitNodeIdx.size())
 			bOverFlag = true;
 

@@ -17,7 +17,7 @@ struct CofidenceValue {
 	float visibility;
 
 	//boundary based term
-	float boundary;
+	//float boundary;
 
 	//distance based term
 	float disTermVal;
@@ -26,6 +26,10 @@ struct CofidenceValue {
 	float totalValue;
 
 	//labels of obstacle, travelable region and boundary
+	//0 nothing 
+	//1 obstacles
+	//2 ground points
+	//3 boundary
 	unsigned int iLabel;
 
 	//minimum flag
@@ -35,6 +39,12 @@ struct CofidenceValue {
 	bool bKnownFlag;
 
 	//travelable or not (can the robot reaches this grid right now)
+	//-1 indicates it is an unknown grid
+	//0 indicates this grid is ground but not reachable now
+    //1 indicates this grid is a travelable region grid
+	//2 is the new scanned grids (input) without growing
+	//3 indicates the grid has been computed
+	//4 indicates this grid is a off groud grid (not reachable forever)
 	short travelable;
 
 	//constructor
@@ -42,7 +52,7 @@ struct CofidenceValue {
 
 		visibility = 1.0;
 		disTermVal = 0.0;
-		boundary = 0.0;
+		//boundary = 0.0;
 		totalValue = 0.0;
 		travelable = -1;
 		iLabel = 0;
