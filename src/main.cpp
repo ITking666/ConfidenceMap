@@ -72,22 +72,27 @@ int main() {
 
 	//**************simulated robot point*******************
 	//original view point index based on ground points
-	int iOriViewIdx = 75000;
+	//int iOriViewIdx = 75000;
 	//original robot position
 	pcl::PointXYZ oRobot;
-	oRobot.x = pAllTravelCloud->points[iOriViewIdx].x;
-	oRobot.y = pAllTravelCloud->points[iOriViewIdx].y;
-	oRobot.z = pAllTravelCloud->points[iOriViewIdx].z + ROBOT_HEIGHT;
-	
+	//oRobot.x = pAllTravelCloud->points[iOriViewIdx].x;
+	//oRobot.y = pAllTravelCloud->points[iOriViewIdx].y;
+	//oRobot.z = pAllTravelCloud->points[iOriViewIdx].z + ROBOT_HEIGHT;
+	oRobot.x = 0.0;
+	oRobot.y = 0.0;
+	oRobot.z = ROBOT_HEIGHT;
+
 	//***************generate the grid map for point clouds***********
 	std::vector<std::vector<int>> vGridBoundPsIdx;
 	std::vector<std::vector<int>> vGridTravelPsIdx;
 	std::vector<std::vector<int>> vGridObsPsIdx;
 
-	GridMap oGridMaper(0.5, 500.0,15.0,0.6);
+	GridMap oGridMaper(0.5, 500.0, ROBOT_AFFECTDIS,0.6);
 	oGridMaper.InitializeMap();
 
+
 	Confidence oCofSolver(ROBOT_AFFECTDIS);
+
 
 	//map
 	oGridMaper.GenerateMap(vGridTravelPsIdx);
@@ -112,7 +117,7 @@ int main() {
 	int iLoopCount = 0;
 
 	//find scanning region of each node (site)
-	//while(iLoopCount!=2&&bOverFlag){
+	//while(iLoopCount!=1&&bOverFlag){
     while(bOverFlag){
 		//judgement
 		bOverFlag = false;

@@ -299,18 +299,32 @@ void Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWardMap,
 	oTotalCenter.x = 0.0;
 	oTotalCenter.y = 0.0;
 	oTotalCenter.z = 0.0;
+	//the grid center at which the robot is
+	float fMaxDisValue = -FLT_MAX;
+	pcl::PointXYZ oRobotGridCenter;
+	oRobotGridCenter.x = 0.0;
+	oRobotGridCenter.y = 0.0;
+	oRobotGridCenter.z = 0.0;
 
 	//**compute the distance part** 
 	for (int i = 0; i != vNeighborGrids.size(); ++i) {
 		//non-empty grid
 		if (vGridTravelPsIdx[vNeighborGrids[i]].size()) {
-		    //compute the center of each neighboring grid
+			//compute the center of each neighboring grid
 			vCenterPoints[i] = ComputeCenter(vTravelCloud, vGridTravelPsIdx[vNeighborGrids[i]]);
 
-		    //compute smooth distance using Gaussin Kernel based on the center point
+			//compute smooth distance using Gaussin Kernel based on the center point
 			//the empty grid has zero value in this term
 			vDisPartValue[i] = GaussianKernel(oRobotPoint, vCenterPoints[i], m_fSigma);
-			
+
+			//judge it is the robot grid
+			if (fMaxDisValue < vDisPartValue[i]){
+				fMaxDisValue = vDisPartValue[i];
+			    oRobotGridCenter.x = vCenterPoints[i].x;
+			    oRobotGridCenter.y = vCenterPoints[i].y;
+			    oRobotGridCenter.z = vCenterPoints[i].z;
+		    }
+
 			//compute the center
 			oTotalCenter.x = oTotalCenter.x + vCenterPoints[i].x;
 			oTotalCenter.y = oTotalCenter.y + vCenterPoints[i].y;
@@ -326,23 +340,34 @@ void Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWardMap,
 	oTotalCenter.x = oTotalCenter.x / fNonEmptyNum;
 	oTotalCenter.y = oTotalCenter.y / fNonEmptyNum;
 	oTotalCenter.z = oTotalCenter.z / fNonEmptyNum;
+	oShowCenter.x = oTotalCenter.x;
+	oShowCenter.y = oTotalCenter.y;
+	oShowCenter.z = oTotalCenter.z;
+	oShowRobot.x = oRobotGridCenter.x;
+	oShowRobot.y = oRobotGridCenter.y;
+	oShowRobot.z = oRobotGridCenter.z;
+	
     //compute the offset vector from query point to the center point 
 	pcl::PointXYZ oCenterOffVec;
-	oCenterOffVec.x = oTotalCenter.x - oRobotPoint.x;
-	oCenterOffVec.y = oTotalCenter.y - oRobotPoint.y;
-	oCenterOffVec.z = oTotalCenter.z - oRobotPoint.z;
+	oCenterOffVec.x = oTotalCenter.x - oRobotGridCenter.x;
+	oCenterOffVec.y = oTotalCenter.y - oRobotGridCenter.y;
+	oCenterOffVec.z = oTotalCenter.z - oRobotGridCenter.z;
 	
+	//define a parameter of the center value to normalize the center part value (between -1 and 1)
+	float fCenterNorPara = m_fSigma * m_fSigma;
 	//for each non-empty neighboring grid
 	for(int i=0;i!=vNeighborGrids.size();++i){
 		//non-empty
 		if (vGridTravelPsIdx[vNeighborGrids[i]].size()) {
 		//compute the grid direction vector from query point to the grid center point  
 		pcl::PointXYZ vGridVector;
-		vGridVector.x = vCenterPoints[i].x - oRobotPoint.x;
-		vGridVector.y = vCenterPoints[i].y - oRobotPoint.y;
-		vGridVector.z = vCenterPoints[i].z - oRobotPoint.z;
+		vGridVector.x = vCenterPoints[i].x - oRobotGridCenter.x;
+		vGridVector.y = vCenterPoints[i].y - oRobotGridCenter.y;
+		vGridVector.z = vCenterPoints[i].z - oRobotGridCenter.z;
 		//
 	    vCenterPartValue[i] = VectorInnerProduct(oCenterOffVec,vGridVector);
+		vCenterPartValue[i] = 1.0 - vCenterPartValue[i] / fCenterNorPara;
+		
 		}//end if (vGridTravelPsIdx[vNeighborGrids[i]].size())
 
 	}//end i 
@@ -358,11 +383,11 @@ void Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWardMap,
 	//fd(p) = max(fd(pi))  
 	for(int i=0;i!=vNeighborGrids.size();++i){
 		//get maximum value of distance term
-		//if(vReWardMap[vNeighborGrids[i]].disTermVal < vCenterPartValue[i] * vDisPartValue[i])
-		//   vReWardMap[vNeighborGrids[i]].disTermVal = vCenterPartValue[i] * vDisPartValue[i];
+		if(vReWardMap[vNeighborGrids[i]].disTermVal < vDisPartValue[i] * vCenterPartValue[i])
+		   vReWardMap[vNeighborGrids[i]].disTermVal = vDisPartValue[i] * vCenterPartValue[i];
 		//here is the case that only distance item works
-		if(vReWardMap[vNeighborGrids[i]].disTermVal < vDisPartValue[i])
-		   vReWardMap[vNeighborGrids[i]].disTermVal = vDisPartValue[i];
+		//if(vReWardMap[vNeighborGrids[i]].disTermVal < vDisPartValue[i])
+		//   vReWardMap[vNeighborGrids[i]].disTermVal = vDisPartValue[i];
 		
 	}
 

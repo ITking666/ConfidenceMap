@@ -95,6 +95,10 @@ public:
 	//normalization of features
 	static void Normalization(std::vector<float> & vFeatures);
 
+	//*******************Public Data Part********************
+	pcl::PointXYZ oShowCenter;
+	pcl::PointXYZ oShowRobot;
+
 private:
 
 	//sigma parameter of Gaussian function in GaussianKernel()
