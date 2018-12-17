@@ -10,6 +10,7 @@
 #include "HPR.h"
 #include "TSP.h"
 #include <iostream>
+#include <fstream>
 #include <cmath>
 #include <ctime>
 #define ROBOT_HEIGHT 1.13933
@@ -110,15 +111,21 @@ int main() {
 	int iRobotGridIdx = oGridMaper.AssignPointToMap(oRobot);
 	OLTSPSolver.GetNewNode(pAllTravelCloud, vGridTravelPsIdx, iRobotGridIdx);
 	oGridMaper.m_vReWardMap[iRobotGridIdx].travelable = 1;
+	oGridMaper.m_vReWardMap[iRobotGridIdx].iLabel = 2;
 	//*************Compute the real region*************
 	//**********The initial point cloud***********
 	
 	bool bOverFlag = true;
 	int iLoopCount = 0;
 
+	pcl::PointXYZ questionPoint;
+	questionPoint.x = 0.357257;
+	questionPoint.y = 0.247594;
+	questionPoint.z = -1.062520;
+	
 	//find scanning region of each node (site)
-	//while(iLoopCount!=1&&bOverFlag){
-    while(bOverFlag){
+	while(iLoopCount!=10 && bOverFlag){
+    //while(bOverFlag){
 		//judgement
 		bOverFlag = false;
 	    //robot location
@@ -156,7 +163,13 @@ int main() {
 
 	}//while
 
-	 //output
+	//***************output***************
+
+	//ouput file
+	//std::ofstream oRecordedFile;
+	//oRecordedFile.open("res.txt", std::ios::out | std::ios::app);
+
+	//display
 	pcl::PointCloud<pcl::PointXYZ>::Ptr pKnownCloud(new pcl::PointCloud<pcl::PointXYZ>);
 	std::vector<float> vConfidenceValue;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr pBackgroundCloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -172,15 +185,28 @@ int main() {
 			}
 			for (int j = 0; j != vGridTravelPsIdx[i].size(); ++j) {
 
-				pKnownCloud->points.push_back(pAllCloud->points[vAllTravelIdx[vGridTravelPsIdx[i][j]]]);
-				vConfidenceValue.push_back(oGridMaper.m_vReWardMap[i].totalValue);
+				if(oGridMaper.m_vReWardMap[i].travelable == 1){
+				    pKnownCloud->points.push_back(pAllCloud->points[vAllTravelIdx[vGridTravelPsIdx[i][j]]]);
+				    vConfidenceValue.push_back(oGridMaper.m_vReWardMap[i].totalValue);
+					//oRecordedFile << pAllCloud->points[vAllTravelIdx[vGridTravelPsIdx[i][j]]].x << " "
+					//	          << pAllCloud->points[vAllTravelIdx[vGridTravelPsIdx[i][j]]].y << " "
+					//	          << pAllCloud->points[vAllTravelIdx[vGridTravelPsIdx[i][j]]].z << " "
+					//	          << oGridMaper.m_vReWardMap[i].totalValue << " "
+					//	          << std::endl;
+				}else{
+					pBackgroundCloud->points.push_back(pAllCloud->points[vAllTravelIdx[vGridTravelPsIdx[i][j]]]);
+					vBGLabels.push_back(0);
+				}
+
 			}
 			for (int j = 0; j != vGridBoundPsIdx[i].size(); ++j) {
 				pBackgroundCloud->points.push_back(pAllCloud->points[vAllBoundIdx[vGridBoundPsIdx[i][j]]]);
-				vBGLabels.push_back(1);
+				vBGLabels.push_back(0);
 			}
 		}//end if
 	}
+
+
 	//std::vector<int> vLabels(pAllCloud->points.size(),0);
 	//for (int i = 0; i != oGridMaper.m_vReWardMap.size(); ++i) {
 
@@ -307,4 +333,25 @@ int main() {
 //		labels[vAllObstacleIdx[vGridObsPsIdx[i][j]]] = 0;
 //
 //	}
+//}
+
+
+////output
+//std::ofstream oRecordedFile;
+//oRecordedFile.open(m_sOutPCFileName.str(), std::ios::out | std::ios::app);
+//
+//for (int i = 0; i != pCloud->points.size(); ++i) {
+//
+//	//output in a txt file
+//	//the storage type of output file is x y z time frames right/left_sensor
+//	oRecordedFile << pCloud->points[i].x << " "
+//		<< pCloud->points[i].y << " "
+//		<< pCloud->points[i].z << " "
+//		<< vRes[i] << " "
+//		<< oStamp << " "
+//		<< std::endl;
+//}//end for         
+//
+//oRecordedFile.close();
+//
 //}

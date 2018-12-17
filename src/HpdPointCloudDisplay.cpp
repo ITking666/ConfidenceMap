@@ -1275,7 +1275,7 @@ Colorvar()函数简介
 	  proportion 属性值在原来集中的位置比例
 输出：所属颜色值
 =================================*/
-float Colorvar(float headnum,float tailnum,float proportion){
+float Colorvar(float headnum,float tailnum, float proportion){
 
 	return headnum + (tailnum - headnum) * proportion;
 

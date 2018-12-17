@@ -308,8 +308,10 @@ void Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWardMap,
 
 	//**compute the distance part** 
 	for (int i = 0; i != vNeighborGrids.size(); ++i) {
-		//non-empty grid
-		if (vGridTravelPsIdx[vNeighborGrids[i]].size()) {
+	
+		//non-empty ground grid
+		if (vReWardMap[vNeighborGrids[i]].iLabel == 2) {
+
 			//compute the center of each neighboring grid
 			vCenterPoints[i] = ComputeCenter(vTravelCloud, vGridTravelPsIdx[vNeighborGrids[i]]);
 
@@ -590,13 +592,13 @@ void Confidence::ComputeTotalCoffidence(std::vector<CofidenceValue> & vReWardMap
 	for (int i = 0; i != vNeighborGrids.size(); ++i) {
 		//define query index
 		int iQueryIdx = vNeighborGrids[i];
-		//if this region is a ground point (this condition does not influence result)
-		//if (vReWardMap[iQueryIdx].iLabel == 2) {
+		//if this region is a ground point 
+		if (vReWardMap[iQueryIdx].iLabel == 2) {
 			//the grid is known
 			if(vReWardMap[iQueryIdx].bKnownFlag)
 			   vReWardMap[iQueryIdx].totalValue = vReWardMap[iQueryIdx].disTermVal * vReWardMap[iQueryIdx].visibility;
 			
-		//}//end if vReWardMap[iQueryIdx].iLabel == 2
+		}//end if vReWardMap[iQueryIdx].iLabel == 2
 	}//end for i = 0
 
 }
