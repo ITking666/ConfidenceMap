@@ -7,7 +7,7 @@
 #include "readtxt.h"
 #include "GridMap.h"
 #include "Confidence.h"
-#include "HPR.h"
+#include "GHPR.h"
 #include "TSP.h"
 #include <iostream>
 #include <fstream>
@@ -124,8 +124,8 @@ int main() {
 	questionPoint.z = -1.062520;
 	
 	//find scanning region of each node (site)
-	while(iLoopCount!=10 && bOverFlag){
-    //while(bOverFlag){
+	//while(iLoopCount!=10 && bOverFlag){
+    while(bOverFlag){
 		//judgement
 		bOverFlag = false;
 	    //robot location
