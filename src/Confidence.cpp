@@ -444,10 +444,11 @@ Return: a vector saves distance value of each neighboring grid
 Others: none
 *************************************************/
 void Confidence::OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
-	                                  const pcl::PointXYZ & oRobotPoint,
 	                            const std::vector<int> & vNeighborGrids,
 	                                   const PCLCloudXYZ & vTravelCloud,
-	             const std::vector<std::vector<int>> & vGridTravelPsIdx) {
+	             const std::vector<std::vector<int>> & vGridTravelPsIdx,
+	                                 const PCLCloudXYZ & vObstacleCloud,
+	                const std::vector<std::vector<int>> & vGridObsPsIdx) {
 
 	//**********Measurement item************
 	//intermediate variables

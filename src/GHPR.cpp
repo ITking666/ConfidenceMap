@@ -155,7 +155,6 @@ std::vector<int> GHPR::ComputeVisibility(const pcl::PointCloud<pcl::PointXYZ> & 
 	//a object based on pcl convex hull class 
     pcl::ConvexHull<pcl::PointXYZ> oConvexHull;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr pChullResCloud(new pcl::PointCloud<pcl::PointXYZ>);
-	pcl::PointIndices vHullPointIndices;
 
 	//input transfored point clouds
 	oConvexHull.setInputCloud(pConvexCloud);
@@ -163,22 +162,66 @@ std::vector<int> GHPR::ComputeVisibility(const pcl::PointCloud<pcl::PointXYZ> & 
 	oConvexHull.setDimension(3);
 	//compute the 3D convex hull
 	oConvexHull.reconstruct(*pChullResCloud);
-	//get the indices of convex hull point (visiable point set)
-	oConvexHull.getHullPointIndices(vHullPointIndices);
 
-	//***Output Result***
-	//output the visible point index
+	//get the indices of convex hull point (visiable point set)
+	//call this function below is risk
+	//because this function could be called only when the version of pcl is up tp 1.8.0
+	//pcl::PointIndices vHullPointIndices;	
+	//oConvexHull.getHullPointIndices(vHullPointIndices);
+
+	//In terms of this situation, we use the kdtree (also O(nlogn)) to find the index
 	std::vector<int> vVisiableIdx;
-	vVisiableIdx.reserve(vHullPointIndices.indices.size() - 1);
-	
-	for (int i = 0; i != vHullPointIndices.indices.size(); ++i){
-		//remove the viewpoint, which must be visiable by itself
-		if (vHullPointIndices.indices[i] != pConvexCloud->points.size() - 1)
-			vVisiableIdx.push_back(vHullPointIndices.indices[i]);
-    }
+	FindVisibleIndices(vVisiableIdx,pConvexCloud,pChullResCloud);
 
 	//return the reslut
 	return vVisiableIdx;
 
 }
 
+/*************************************************
+Function: FindHullIndices
+Description: find the point indices of constructed convex hull
+Calls: none
+Called By: ComputeVisibility
+Table Accessed: none
+Table Updated: none
+Input: vCloud - an input point clouds
+       oViewPoint - a viewpoint
+Output: none
+Return: none
+Others: none
+*************************************************/
+void GHPR::FindVisibleIndices(std::vector<int> & vVisibleIndices,
+	                          const pcl::PointCloud<pcl::PointXYZ>::Ptr & pTransforCloud,
+	                          const pcl::PointCloud<pcl::PointXYZ>::Ptr & pHullCloud) {
+
+	//define output
+	//remove the viewpoint from ouput list
+	vVisibleIndices.clear();
+	vVisibleIndices.reserve(pHullCloud->points.size() - 1);
+	int iViewPointIdx = pTransforCloud->points.size() - 1;
+
+	//construct a kdtree
+	pcl::KdTreeFLANN<pcl::PointXYZ> oTransforTree;
+	oTransforTree.setInputCloud(pTransforCloud);
+
+
+	//find indices using kdtree
+	for (size_t i = 0; i != pHullCloud->points.size(); ++i) {
+
+		//define temps
+		std::vector<int> vNearestIdx;
+		std::vector<float> vNearestDis;
+		
+		//search the nearest raw point of query constructed convex hull surface point 
+		oTransforTree.nearestKSearch(pHullCloud->points[i], 1, vNearestIdx, vNearestDis);
+
+		//if the query point is not the viewpoint
+		if (vNearestIdx[0] != iViewPointIdx)
+			vVisibleIndices.push_back(vNearestIdx[0]);
+		else
+			std::cout << "got it," << " it is " << vNearestIdx[0] << std::endl;
+
+	}//end for i != pHullCloud->points.size()
+
+}

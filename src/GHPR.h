@@ -49,6 +49,11 @@ public:
 	std::vector<int> ComputeVisibility(const pcl::PointCloud<pcl::PointXYZ> & vCloud,
 		                                            const pcl::PointXYZ & oViewPoint);
 
+	//find the indices of convex hull
+	void FindVisibleIndices(std::vector<int> & vVisibleIndices,
+		                    const pcl::PointCloud<pcl::PointXYZ>::Ptr & pTransforCloud,
+		                    const pcl::PointCloud<pcl::PointXYZ>::Ptr & pHullCloud);
+
 private:
 
 	//m_fParam >= 1.0, in practice, it will be very large
