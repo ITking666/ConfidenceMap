@@ -164,7 +164,8 @@ Output: centerpoint center point(position) of the queried point set
 Return: centerpoint
 Others: none
 *************************************************/
-pcl::PointXYZ Confidence::ComputeCenter(const PCLCloudXYZ & vCloud, const std::vector<int> & vPointIdx){
+pcl::PointXYZ Confidence::ComputeCenter(const PCLCloudXYZ & vCloud,
+	                            const std::vector<int> & vPointIdx){
 
 	//define output
 	pcl::PointXYZ oCenter;

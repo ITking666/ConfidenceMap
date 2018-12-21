@@ -25,6 +25,19 @@ struct ScanIndex{
 
 };
 
+struct PVGridStatus{
+
+	bool visible;
+	bool added;
+
+	PVGridStatus(){
+		
+		visible = false;
+		added = false;
+	
+	};
+};
+
 void GetScanPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr & pScanCloud,
                    std::vector<ScanIndex> & vScanPointIdx,
 	               const std::vector<int> & vNearbyGrids,
@@ -85,9 +98,9 @@ void GetScanPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr & pScanCloud,
 
 };
 
-void RecordScanLabel(std::vector<bool> & vObstacleScan,
-                     std::vector<bool> & vTravelScan,
-                     std::vector<bool> & vBoundScan,
+void RecordScanLabel(std::vector<PVGridStatus> & vObstacleScan,
+                     std::vector<PVGridStatus> & vTravelScan,
+                     std::vector<PVGridStatus> & vBoundScan,
 	                 const std::vector<ScanIndex> & vScanPointIdx, 
 	                 const std::vector<int> & vVisableIdx){
 	
@@ -95,19 +108,73 @@ void RecordScanLabel(std::vector<bool> & vObstacleScan,
 
 	//if it is a ground
 	    if (vScanPointIdx[vVisableIdx[i]].label == 0){
-			vObstacleScan[vScanPointIdx[vVisableIdx[i]].idx] = true;
+			vObstacleScan[vScanPointIdx[vVisableIdx[i]].idx].visible = true;
 			
 		}else if (vScanPointIdx[vVisableIdx[i]].label == 1){
-			vTravelScan[vScanPointIdx[vVisableIdx[i]].idx] = true;
+			vTravelScan[vScanPointIdx[vVisableIdx[i]].idx].visible = true;
 			
 		}else{
-			vBoundScan[vScanPointIdx[vVisableIdx[i]].idx] = true;
+			vBoundScan[vScanPointIdx[vVisableIdx[i]].idx].visible = true;
 			
         }
 
     }//end for i = 0; i != vVisableIdx.size(); ++i
 
 }
+
+void GetGridVisiblePIdx(std::vector<std::vector<int>> & vGVTravelPsIdx,
+                              std::vector<PVGridStatus> & vTravelScan,
+	           const std::vector<std::vector<int>> & vGridTravelPsIdx,
+                          std::vector<std::vector<int>> & vGVObsPsIdx,
+	                        std::vector<PVGridStatus> & vObstacleScan,                   
+	              const std::vector<std::vector<int>> & vGridObsPsIdx,
+	                    std::vector<std::vector<int>> & vGVBoundPsIdx,
+                               std::vector<PVGridStatus> & vBoundScan,
+                const std::vector<std::vector<int>> & vGridBoundPsIdx){
+
+	//save visible travel idx
+	for (int i = 0; i != vGridTravelPsIdx.size(); ++i) {
+		for (int j = 0; j != vGridTravelPsIdx[i].size(); ++j) {
+			if (vTravelScan[vGridTravelPsIdx[i][j]].visible &&
+				!vTravelScan[vGridTravelPsIdx[i][j]].added) {
+				
+				vGVTravelPsIdx[i].push_back(vGridTravelPsIdx[i][j]);
+				vTravelScan[vGridTravelPsIdx[i][j]].added = true;
+
+			}
+		}
+	}
+
+	//save the boundary points
+	for(int i = 0;i!= vGridBoundPsIdx.size();++i){
+		for (int j = 0; j != vGridBoundPsIdx[i].size(); ++j) {
+			if (vBoundScan[vGridBoundPsIdx[i][j]].visible &&
+				!vBoundScan[vGridBoundPsIdx[i][j]].added) {
+
+				vGVBoundPsIdx[i].push_back(vGridBoundPsIdx[i][j]);
+				vBoundScan[vGridBoundPsIdx[i][j]].added = true;
+
+			}
+		}
+    }
+
+	//save obstacle points
+	for (int i = 0; i != vGridObsPsIdx.size(); ++i) {
+		for (int j = 0; j != vGridObsPsIdx[i].size(); ++j) {
+			if (vObstacleScan[vGridObsPsIdx[i][j]].visible &&
+				!vObstacleScan[vGridObsPsIdx[i][j]].added) {
+
+				vGVObsPsIdx[i].push_back(vGridObsPsIdx[i][j]);
+				vObstacleScan[vGridObsPsIdx[i][j]].added = true;
+
+			}
+		}
+	}
+
+};
+
+
+
 
 int main() {
 
@@ -180,6 +247,7 @@ int main() {
 	std::vector<std::vector<int>> vGridTravelPsIdx;
 	std::vector<std::vector<int>> vGridObsPsIdx;
 
+
 	GridMap oGridMaper(0.5, 500.0, ROBOT_AFFECTDIS,0.6);
 	oGridMaper.InitializeMap();
 
@@ -187,16 +255,20 @@ int main() {
 	Confidence oCofSolver(ROBOT_AFFECTDIS);
 
 	//the scanning label in simulation
-	std::vector<bool> vObstacleScan(pAllObstacleCloud->points.size(),false);
-	std::vector<bool> vTravelScan(pAllTravelCloud->points.size(), false);
-	std::vector<bool> vBoundScan(pAllBoundCloud->points.size(), false);
+	std::vector<PVGridStatus> vObstacleScan(pAllObstacleCloud->points.size());
+	std::vector<PVGridStatus> vTravelScan(pAllTravelCloud->points.size());
+	std::vector<PVGridStatus> vBoundScan(pAllBoundCloud->points.size());
 
 	//map
 	oGridMaper.GenerateMap(vGridTravelPsIdx);
 	oGridMaper.GenerateMap(vGridBoundPsIdx);
 	oGridMaper.GenerateMap(vGridObsPsIdx);
+	std::vector<std::vector<int>> vGVBoundPsIdx(vGridBoundPsIdx.size());
+	std::vector<std::vector<int>> vGVTravelPsIdx(vGridTravelPsIdx.size());
+	std::vector<std::vector<int>> vGVObsPsIdx(vGridObsPsIdx.size());
 	
-	//
+
+	//assign point to map
 	oGridMaper.AssignPointsToMap(*pAllObstacleCloud, vGridObsPsIdx, 1);
 	oGridMaper.AssignPointsToMap(*pAllTravelCloud, vGridTravelPsIdx,2);
 	oGridMaper.AssignPointsToMap(*pAllBoundCloud, vGridBoundPsIdx,3);
@@ -237,15 +309,23 @@ int main() {
 		pcl::PointCloud<pcl::PointXYZ>::Ptr pScanCloud(new pcl::PointCloud<pcl::PointXYZ>);
 		std::vector<ScanIndex> vScanPointIdx;
 		std::cout << "1" << std::endl;
-		GetScanPoints(pScanCloud, vScanPointIdx, vNearbyGrids, oGridMaper, vGridBoundPsIdx,
-			vGridTravelPsIdx, vGridObsPsIdx, pAllObstacleCloud, pAllBoundCloud, pAllTravelCloud);
+		GetScanPoints(pScanCloud, vScanPointIdx, vNearbyGrids, oGridMaper,
+			          vGridBoundPsIdx,vGridTravelPsIdx, vGridObsPsIdx, 
+			          pAllObstacleCloud, pAllBoundCloud, pAllTravelCloud);
 		//generate a GHPR object
 		GHPR oGHPRer(3.6);
 		
 		//compute the visibility of point clouds
 		std::vector<int> vVisableIdx = oGHPRer.ComputeVisibility(*pScanCloud, oRobot);
 		std::cout << "2" << std::endl;
-		RecordScanLabel(vObstacleScan, vTravelScan, vBoundScan,vScanPointIdx, vVisableIdx);
+
+		RecordScanLabel(vObstacleScan, vTravelScan, vBoundScan,
+			                         vScanPointIdx, vVisableIdx);
+
+		GetGridVisiblePIdx(vGVTravelPsIdx, vTravelScan, vGridTravelPsIdx, 
+			                   vGVObsPsIdx, vObstacleScan, vGridObsPsIdx,
+			                  vGVBoundPsIdx, vBoundScan, vGridBoundPsIdx);
+			
 
 
 	}//while
@@ -262,79 +342,78 @@ int main() {
 	pcl::PointCloud<pcl::PointXYZ>::Ptr pBackgroundCloud(new pcl::PointCloud<pcl::PointXYZ>);
 	std::vector<int> vBGLabels;
 	std::cout << "3" << std::endl;
+
+	//for display the result
 	for (int i = 0; i != oGridMaper.m_vReWardMap.size(); ++i) {
 
+		//save the travel points
 		if (oGridMaper.m_vReWardMap[i].bKnownFlag) {
+			//if here is the travelable region 
+			if (oGridMaper.m_vReWardMap[i].travelable == 1) {
 
-			for (int j = 0; j != vGridObsPsIdx[i].size(); ++j) {
-				pBackgroundCloud->points.push_back(pAllCloud->points[vAllObstacleIdx[vGridObsPsIdx[i][j]]]);
-				vBGLabels.push_back(0);
-			}
-			for (int j = 0; j != vGridTravelPsIdx[i].size(); ++j) {
+				for (int j = 0; j != vGVTravelPsIdx[i].size(); ++j) {
 
-				if(oGridMaper.m_vReWardMap[i].travelable == 1){
-				    pKnownCloud->points.push_back(pAllCloud->points[vAllTravelIdx[vGridTravelPsIdx[i][j]]]);
-				    vConfidenceValue.push_back(oGridMaper.m_vReWardMap[i].totalValue);
+					pKnownCloud->points.push_back(pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]]);
+					vConfidenceValue.push_back(oGridMaper.m_vReWardMap[i].totalValue);
+
+					//record the data in txt file for test
 					//oRecordedFile << pAllCloud->points[vAllTravelIdx[vGridTravelPsIdx[i][j]]].x << " "
 					//	          << pAllCloud->points[vAllTravelIdx[vGridTravelPsIdx[i][j]]].y << " "
 					//	          << pAllCloud->points[vAllTravelIdx[vGridTravelPsIdx[i][j]]].z << " "
 					//	          << oGridMaper.m_vReWardMap[i].totalValue << " "
 					//	          << std::endl;
-				}else{
-					pBackgroundCloud->points.push_back(pAllCloud->points[vAllTravelIdx[vGridTravelPsIdx[i][j]]]);
+
+
+				}//end for j
+			}
+			else {
+				for (int j = 0; j != vGVTravelPsIdx[i].size(); ++j) {
+
+					pBackgroundCloud->points.push_back(pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]]);
 					vBGLabels.push_back(0);
-				}
+
+				}//end for j
+			}//end else
+
+			 //save the boundary points
+			for (int j = 0; j != vGVBoundPsIdx[i].size(); ++j) {
+
+				pBackgroundCloud->points.push_back(pAllCloud->points[vAllBoundIdx[vGVBoundPsIdx[i][j]]]);
+				vBGLabels.push_back(0);
 
 			}
-			for (int j = 0; j != vGridBoundPsIdx[i].size(); ++j) {
-				pBackgroundCloud->points.push_back(pAllCloud->points[vAllBoundIdx[vGridBoundPsIdx[i][j]]]);
+
+			//save obstacle points
+			for (int j = 0; j != vGVObsPsIdx[i].size(); ++j) {
+
+				pBackgroundCloud->points.push_back(pAllCloud->points[vAllObstacleIdx[vGVObsPsIdx[i][j]]]);
 				vBGLabels.push_back(0);
+
 			}
-		}//end if
+
+		}//end if (oGridMaper.m_vReWardMap[i].bKnownFlag)
 	}
 
 	std::cout << "4" << std::endl;
-	std::vector<int> vLabels(pAllCloud->points.size(),0);
-	//for (int i = 0; i != oGridMaper.m_vReWardMap.size(); ++i) {
+	
+	//std::vector<int> vLabels(pAllCloud->points.size(),0);
+	//for(int i=0;i!= oGridMaper.m_vReWardMap.size();++i){
 
-	//	if (oGridMaper.m_vReWardMap[i].travelable == 1) {
-	//		for (int j = 0; j != vGridTravelPsIdx[i].size(); ++j)
-	//			vLabels[vAllTravelIdx[vGridTravelPsIdx[i][j]]] = 1;
-	//		for (int j = 0; j != vGridBoundPsIdx[i].size(); ++j)
-	//			vLabels[vAllBoundIdx[vGridBoundPsIdx[i][j]]] = 1;
-	//		for (int j = 0; j != vGridObsPsIdx[i].size(); ++j)
-	//			vLabels[vAllObstacleIdx[vGridObsPsIdx[i][j]]] = 1;
-	//	}
+	//for (int j = 0; j != vGridTravelPsIdx[i].size(); ++j)
+	//	if(vTravelScan[vGridTravelPsIdx[i][j]])
+	//       vLabels[vAllTravelIdx[vGridTravelPsIdx[i][j]]] = 1;
+
+	//for (int j = 0; j != vGridBoundPsIdx[i].size(); ++j)
+	//	if(vBoundScan[vGridBoundPsIdx[i][j]])
+	//       vLabels[vAllBoundIdx[vGridBoundPsIdx[i][j]]] = 1;
+
+	//for (int j = 0; j != vGridObsPsIdx[i].size(); ++j)
+	//	if(vObstacleScan[vGridObsPsIdx[i][j]])
+	//       vLabels[vAllObstacleIdx[vGridObsPsIdx[i][j]]] = 1;
+
 	//}
-	for(int i=0;i!= oGridMaper.m_vReWardMap.size();++i){
 
-	for (int j = 0; j != vGridTravelPsIdx[i].size(); ++j)
-		if(vTravelScan[vGridTravelPsIdx[i][j]])
-	       vLabels[vAllTravelIdx[vGridTravelPsIdx[i][j]]] = 1;
-
-	for (int j = 0; j != vGridBoundPsIdx[i].size(); ++j)
-		if(vBoundScan[vGridBoundPsIdx[i][j]])
-	       vLabels[vAllBoundIdx[vGridBoundPsIdx[i][j]]] = 1;
-
-	for (int j = 0; j != vGridObsPsIdx[i].size(); ++j)
-		if(vObstacleScan[vGridObsPsIdx[i][j]])
-	       vLabels[vAllObstacleIdx[vGridObsPsIdx[i][j]]] = 1;
-
-	}
 	std::cout << "5" << std::endl;
-	/*for(int i=0;i!= oGridMaper.m_vReWardMap.size();++i){
-		if(oGridMaper.m_vReWardMap[i].travelable==1){
-			for (int j = 0; j != vGridTravelPsIdx[i].size(); ++j)
-		        vLabels[vAllTravelIdx[vGridTravelPsIdx[i][j]]] = 1;
-	        for (int j = 0; j != vGridBoundPsIdx[i].size(); ++j)
-		        vLabels[vAllBoundIdx[vGridBoundPsIdx[i][j]]] = 1;
-	        for (int j = 0; j != vGridObsPsIdx[i].size(); ++j)
-		        vLabels[vAllObstacleIdx[vGridObsPsIdx[i][j]]] = 1;
-		
-		}
-		
-	}*/
-
 
 	std::vector<pcl::PointXYZ> vViewPoints;
 	std::vector<pcl::PointXYZ> vUnVisitedView;
@@ -346,10 +425,10 @@ int main() {
 	boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
 	HpdDisplay hpdisplay;
 
-	//viewer = hpdisplay.ShowMixedResult(pKnownCloud, vConfidenceValue,
-	//	                               pBackgroundCloud, vBGLabels,
-	//	                               "redgreen", "assign");
-	viewer = hpdisplay.Showclassification(pAllCloud, vLabels,"assign");
+	viewer = hpdisplay.ShowMixedResult(pKnownCloud, vConfidenceValue,
+		                               pBackgroundCloud, vBGLabels,
+		                               "redgreen", "assign");
+	//viewer = hpdisplay.Showclassification(pAllCloud, vLabels,"assign");
 
 	while (!viewer->wasStopped())
 	{
