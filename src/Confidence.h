@@ -77,11 +77,14 @@ public:
 
 	//3. Compute the occlusion
 	void OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
-		                const std::vector<int> & vNeighborGrids,
-		                       const PCLCloudXYZ & vTravelCloud,
-		 const std::vector<std::vector<int>> & vGridTravelPsIdx,
-		                     const PCLCloudXYZ & vObstacleCloud,
-		    const std::vector<std::vector<int>> & vGridObsPsIdx);
+	                    const std::vector<int> & vNeighborGrids,
+						      const pcl::PointXYZ & oRobotPoint,
+	                           const PCLCloudXYZ & vTravelCloud,
+	     const std::vector<std::vector<int>> & vGridTravelPsIdx,
+				             const PCLCloudXYZ & vAllBoundCloud,
+		  const std::vector<std::vector<int>> & vGridBoundPsIdx,
+	                         const PCLCloudXYZ & vObstacleCloud,
+	        const std::vector<std::vector<int>> & vGridObsPsIdx);
 	
 	//4. Compute the boundary item
 	//std::vector<float> BoundaryTerm(PCLCloudXYZ & vTravelCloud, PCLCloudXYZ & vBoundCloud, pcl::PointXYZ & oRobotPoint);

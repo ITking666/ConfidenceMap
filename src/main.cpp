@@ -183,7 +183,7 @@ int main() {
 	//read data
 	std::vector<std::vector<double> > vRawData;
 	//read data for data file
-	ReadMatrix("test2.txt", vRawData);
+	ReadMatrix("test.txt", vRawData);
 	std::cout << "Reading data completed!" << std::endl;
 
 	//all point clouds
@@ -248,7 +248,7 @@ int main() {
 	std::vector<std::vector<int>> vGridObsPsIdx;
 
 
-	GridMap oGridMaper(0.5, 500.0, ROBOT_AFFECTDIS,0.6);
+	GridMap oGridMaper(0.5, 500.0, ROBOT_AFFECTDIS*0.66, 0.6);
 	oGridMaper.InitializeMap();
 
 
@@ -288,7 +288,7 @@ int main() {
 
 	//find scanning region of each node (site)
 	//while(iLoopCount!=10 && bOverFlag){
-    while(iLoopCount != 2 && bOverFlag){
+    while(bOverFlag){
 		//judgement
 		bOverFlag = false;
 	    //robot location
@@ -296,7 +296,7 @@ int main() {
 		   iRobotGridIdx = OLTSPSolver.m_vUnVisitNodeIdx[0];
 		   oRobot.x =  OLTSPSolver.m_vUnVisitCenters[0].x;
 		   oRobot.y =  OLTSPSolver.m_vUnVisitCenters[0].y;
-		   oRobot.z =  OLTSPSolver.m_vUnVisitCenters[0].z;
+		   oRobot.z =  OLTSPSolver.m_vUnVisitCenters[0].z + ROBOT_HEIGHT;
 		}
 		std::cout << "iRobotGridIdx: "<< iRobotGridIdx << std::endl;
 		//find scanning region
@@ -337,7 +337,11 @@ int main() {
 		oGridMaper.RegionGrow(vNearbyGrids);
 
 		oCofSolver.DistanceTerm(oGridMaper.m_vReWardMap, oRobot, vNearbyGrids, *pAllTravelCloud, vGVTravelPsIdx);
-		//oCofSolver.OcclusionTerm(oGridMaper.m_vReWardMap, oRobot, vNearbyGrids, *pAllTravelCloud, vGridTravelPsIdx);
+
+		oCofSolver.OcclusionTerm(oGridMaper.m_vReWardMap, vNearbyGrids, oRobot,
+			                     *pAllTravelCloud, vGridTravelPsIdx, *pAllBoundCloud,
+								 vGridBoundPsIdx,*pAllObstacleCloud,vGridObsPsIdx); 
+
 		oCofSolver.ComputeTotalCoffidence(oGridMaper.m_vReWardMap, vNearbyGrids);
 
 		//using the minimum suppression

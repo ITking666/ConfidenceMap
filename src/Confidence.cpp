@@ -446,15 +446,25 @@ Others: none
 *************************************************/
 void Confidence::OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
 	                            const std::vector<int> & vNeighborGrids,
+								      const pcl::PointXYZ & oRobotPoint,
 	                                   const PCLCloudXYZ & vTravelCloud,
 	             const std::vector<std::vector<int>> & vGridTravelPsIdx,
+				                     const PCLCloudXYZ & vAllBoundCloud,
+				  const std::vector<std::vector<int>> & vGridBoundPsIdx,
 	                                 const PCLCloudXYZ & vObstacleCloud,
-	                const std::vector<std::vector<int>> & vGridObsPsIdx) {
+	                const std::vector<std::vector<int>> & vGridObsPsIdx){
 
 	//**********Measurement item************
 	//intermediate variables
 	std::vector<float> OccValue;///<distance weight part 
-	OccValue.resize(vGridTravelPsIdx.size(), 1.0);
+	OccValue.resize(vGridTravelPsIdx.size(), 0.0);
+
+
+	PCLCloudXYZPtr pOccCloud(new PCLCloudXYZ);
+	//std::vector<int> vVisableIdx = ComputeVisibility(*pOccCloud, oRobotPoint);
+
+	//for()
+
 
 	//**********Incremental item************
 	//fd(p) = max(fd(pi))  
