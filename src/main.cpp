@@ -288,7 +288,7 @@ int main() {
 
 	//find scanning region of each node (site)
 	//while(iLoopCount!=10 && bOverFlag){
-    while(iLoopCount != 1 && bOverFlag){
+    while(iLoopCount != 2 && bOverFlag){
 		//judgement
 		bOverFlag = false;
 	    //robot location
@@ -301,32 +301,58 @@ int main() {
 		std::cout << "iRobotGridIdx: "<< iRobotGridIdx << std::endl;
 		//find scanning region
 	    std::vector<int> vNearbyGrids = oGridMaper.SearchGrids(iRobotGridIdx, ROBOT_AFFECTDIS/0.5);
-		//get the known grid indexes
-	    for (int i = 0; i != vNearbyGrids.size(); ++i)
-		     oGridMaper.m_vReWardMap[vNearbyGrids[i]].bKnownFlag = true;
-		oGridMaper.RegionGrow(vNearbyGrids);
-		
+
+		//get the scanning point from neighboring region
 		pcl::PointCloud<pcl::PointXYZ>::Ptr pScanCloud(new pcl::PointCloud<pcl::PointXYZ>);
 		std::vector<ScanIndex> vScanPointIdx;
 		std::cout << "1" << std::endl;
 		GetScanPoints(pScanCloud, vScanPointIdx, vNearbyGrids, oGridMaper,
 			          vGridBoundPsIdx,vGridTravelPsIdx, vGridObsPsIdx, 
 			          pAllObstacleCloud, pAllBoundCloud, pAllTravelCloud);
+
 		//generate a GHPR object
 		GHPR oGHPRer(3.6);
 		
 		//compute the visibility of point clouds
 		std::vector<int> vVisableIdx = oGHPRer.ComputeVisibility(*pScanCloud, oRobot);
 		std::cout << "2" << std::endl;
-
+		//record the scanning
 		RecordScanLabel(vObstacleScan, vTravelScan, vBoundScan,
 			                         vScanPointIdx, vVisableIdx);
 
+		//get the grid visible point indices
 		GetGridVisiblePIdx(vGVTravelPsIdx, vTravelScan, vGridTravelPsIdx, 
 			                   vGVObsPsIdx, vObstacleScan, vGridObsPsIdx,
 			                  vGVBoundPsIdx, vBoundScan, vGridBoundPsIdx);
-			
+		
+		//get the known grid indexes
+		for (int i = 0; i != vNearbyGrids.size(); ++i){
+			int iQueryIdx = vNearbyGrids[i];
+			if(vGVTravelPsIdx[iQueryIdx].size() ||
+				  vGVObsPsIdx[iQueryIdx].size() ||
+				vGVBoundPsIdx[iQueryIdx].size())
+			oGridMaper.m_vReWardMap[vNearbyGrids[i]].bKnownFlag = true;
+		}
 
+		oGridMaper.RegionGrow(vNearbyGrids);
+
+		oCofSolver.DistanceTerm(oGridMaper.m_vReWardMap, oRobot, vNearbyGrids, *pAllTravelCloud, vGVTravelPsIdx);
+		//oCofSolver.OcclusionTerm(oGridMaper.m_vReWardMap, oRobot, vNearbyGrids, *pAllTravelCloud, vGridTravelPsIdx);
+		oCofSolver.ComputeTotalCoffidence(oGridMaper.m_vReWardMap, vNearbyGrids);
+
+		//using the minimum suppression
+		std::vector<int> vNodeGridIdxs = oGridMaper.NonMinimumSuppression();
+
+		//OLTSP calculation
+		OLTSPSolver.GetCurrentLocation(pAllTravelCloud, vGridTravelPsIdx, iRobotGridIdx);
+		OLTSPSolver.GetNewNodes(pAllTravelCloud, vGridTravelPsIdx, vNodeGridIdxs);
+		OLTSPSolver.GTR(oGridMaper.m_vReWardMap);
+
+		iLoopCount = iLoopCount + 1;
+		std::cout << "loops " << iLoopCount << std::endl;
+
+		if (OLTSPSolver.m_vUnVisitNodeIdx.size())
+			bOverFlag = true;
 
 	}//while
 
@@ -429,6 +455,40 @@ int main() {
 		                               pBackgroundCloud, vBGLabels,
 		                               "redgreen", "assign");
 	//viewer = hpdisplay.Showclassification(pAllCloud, vLabels,"assign");
+	//add simulated robot point for display
+	for (int i = 0; i != vViewPoints.size(); ++i) {
+		stringstream viewpointstream;
+		viewpointstream << i << "th_view";
+		std::string numlabel;
+		viewpointstream >> numlabel;
+		stringstream arrowstream;
+		arrowstream << i << "_" << i + 1 << "_arrow";
+		std::string arrowNumLabel;
+		arrowstream >> arrowNumLabel;
+		vViewPoints[i].z = vViewPoints[i].z + ROBOT_HEIGHT;
+		viewer->addSphere(vViewPoints[i], 0.2, float(i + 1) / float(vViewPoints.size()), float(i + 1) / float(vViewPoints.size()), float(i + 1) / float(vViewPoints.size()), numlabel.c_str());
+		if (i)
+			viewer->addArrow(vViewPoints[i], vViewPoints[i - 1], 0.0, 0.0, 1.0, false, arrowNumLabel.c_str());
+	}
+
+	for (int i = 0; i != vUnVisitedView.size(); ++i) {
+		stringstream unviewpointstream;
+		unviewpointstream << i << "th_UnvisitedView";
+		std::string unviewpointnumlabel;
+		unviewpointstream >> unviewpointnumlabel;
+
+		stringstream unarrowstream;
+		unarrowstream << i << "_" << i + 1 << "_unArrow";
+		std::string unArrowNumLabel;
+		unarrowstream >> unArrowNumLabel;
+
+		vUnVisitedView[i].z = vUnVisitedView[i].z + ROBOT_HEIGHT;
+		viewer->addSphere(vUnVisitedView[i], 0.2, 1.0, 0.0, 0.0, unviewpointnumlabel.c_str());
+		if (i)
+			viewer->addArrow(vUnVisitedView[i], vUnVisitedView[i - 1], 1.0, 0.0, 0.0, false, unArrowNumLabel.c_str());
+		else
+			viewer->addArrow(vUnVisitedView[i], vViewPoints[vViewPoints.size() - 1], 1.0, 0.0, 0.0, false, unArrowNumLabel.c_str());
+	}
 
 	while (!viewer->wasStopped())
 	{
