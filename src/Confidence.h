@@ -1,7 +1,7 @@
 #ifndef CONFIDENCE_H 
 #define CONFIDENCE_H 
-#include"GridMap.h"
-
+#include "GridMap.h"
+#include "GHPR.h"
 ///************************************************************************///
 // a class to implement the Gaussian Process Regression algorithm
 // created and edited by Huang Pengdi
@@ -78,7 +78,7 @@ public:
 	//3. Compute the occlusion
 	void OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
 	                    const std::vector<int> & vNeighborGrids,
-						      const pcl::PointXYZ & oRobotPoint,
+		  const std::vector<pcl::PointXYZ> & vHistoryViewPoints,
 	                           const PCLCloudXYZ & vTravelCloud,
 	     const std::vector<std::vector<int>> & vGridTravelPsIdx,
 				             const PCLCloudXYZ & vAllBoundCloud,

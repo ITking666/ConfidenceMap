@@ -446,7 +446,7 @@ Others: none
 *************************************************/
 void Confidence::OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
 	                            const std::vector<int> & vNeighborGrids,
-								      const pcl::PointXYZ & oRobotPoint,
+				  const std::vector<pcl::PointXYZ> & vHistoryViewPoints,
 	                                   const PCLCloudXYZ & vTravelCloud,
 	             const std::vector<std::vector<int>> & vGridTravelPsIdx,
 				                     const PCLCloudXYZ & vAllBoundCloud,
@@ -454,27 +454,84 @@ void Confidence::OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
 	                                 const PCLCloudXYZ & vObstacleCloud,
 	                const std::vector<std::vector<int>> & vGridObsPsIdx){
 
-	//**********Measurement item************
-	//intermediate variables
-	std::vector<float> OccValue;///<distance weight part 
-	OccValue.resize(vGridTravelPsIdx.size(), 0.0);
 
-
+	//point clouds to be seen
 	PCLCloudXYZPtr pOccCloud(new PCLCloudXYZ);
-	//std::vector<int> vVisableIdx = ComputeVisibility(*pOccCloud, oRobotPoint);
+	//point index to the travel grid
+	std::vector<int> vTravelPointBelongIdx;
 
-	//for()
-
-
-	//**********Incremental item************
-	//fd(p) = max(fd(pi))  
+	//save the point that is in a reachable grid to compute a confidence map
 	for (int i = 0; i != vNeighborGrids.size(); ++i) {
-		//get maximum value of distance term
-			vReWardMap[vNeighborGrids[i]].visibility = OccValue[i];
-		//here is the case that only distance item works
-		//if(vReWardMap[vNeighborGrids[i]].boundary < vDisPartValue[i])
-		//   vReWardMap[vNeighborGrids[i]].boundary = vDisPartValue[i];
-	}
+
+		int iOneGridIdx = vNeighborGrids[i];
+		//if it is a ground grid
+		if (vReWardMap[iOneGridIdx].iLabel == 2) {
+
+			//record the ground point only
+			for (int j = 0; j != vGridTravelPsIdx[iOneGridIdx].size(); ++j) {
+				pOccCloud->points.push_back(vTravelCloud.points[vGridTravelPsIdx[iOneGridIdx][j]]);
+				vTravelPointBelongIdx.push_back(i);
+			}//end for j
+
+		}//end if vReWardMap[vNeighborGrids[i]].iLabel == 2
+
+	}//end for i
+
+	//save the point that is in an unreachable grid
+	for (int i = 0; i != vNeighborGrids.size(); ++i) {
+
+		int iOneGridIdx = vNeighborGrids[i];
+
+		if (vReWardMap[iOneGridIdx].iLabel != 2) {
+			//record the ground point
+			for (int j = 0; j != vGridTravelPsIdx[iOneGridIdx].size(); ++j)
+				pOccCloud->points.push_back(vTravelCloud.points[vGridTravelPsIdx[iOneGridIdx][j]]);
+
+			//record the boundary point
+			for (int j = 0; j != vGridBoundPsIdx[iOneGridIdx].size(); ++j) 
+				pOccCloud->points.push_back(vAllBoundCloud.points[vGridBoundPsIdx[iOneGridIdx][j]]);
+
+			//record the obstacle point
+			for (int j = 0; j != vGridObsPsIdx[iOneGridIdx].size(); ++j)
+				pOccCloud->points.push_back(vObstacleCloud.points[vGridObsPsIdx[iOneGridIdx][j]]);
+
+		}//end if vReWardMap[vNeighborGrids[i]].iLabel != 2
+
+	}//end for i
+
+
+	//std::vector<int> vVisableIdx = ComputeVisibility(*pOccCloud, oRobotPoint);
+	GHPR oGHPRer(3.6);
+
+	for (int i = 0; i != vHistoryViewPoints.size(); ++i) {
+	
+		//**********Measurement item************
+		//intermediate variables
+		std::vector<bool> vNearGridOccValue(vNeighborGrids.size(), false);///<distance weight part 
+
+	    //compute the visibility based on the history of view points
+		std::vector<int> vVisableIdx = oGHPRer.ComputeVisibility(*pOccCloud, vHistoryViewPoints[i]);
+	
+		//visibility result assignment 
+		for (int j = 0; j != vVisableIdx.size(); ++j){
+		
+		    //if it is in a travelable region 
+			if (vVisableIdx[j] < vTravelPointBelongIdx.size()) {
+				vNearGridOccValue[vTravelPointBelongIdx[vVisableIdx[j]]] = true;
+			}
+		
+		}
+	
+	    //**********Incremental item************
+	    //fv(p) = fv(n)  
+	    for (int i = 0; i != vNeighborGrids.size(); ++i){
+		     //get maximum value of distance term
+			 if(vNearGridOccValue[i])
+			    vReWardMap[vNeighborGrids[i]].visibility += 1.0;
+
+	    }
+
+	}//end for (int i = 0; i != vHistoryViewPoints.size(); ++i) {
 
 }
 
