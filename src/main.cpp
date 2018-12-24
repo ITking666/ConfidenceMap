@@ -248,7 +248,7 @@ int main() {
 	std::vector<std::vector<int>> vGridObsPsIdx;
 
 
-	GridMap oGridMaper(0.5, 500.0, ROBOT_AFFECTDIS*0.66, 0.6);
+	GridMap oGridMaper(0.5, 500.0, ROBOT_AFFECTDIS*0.5, 0.6);
 	oGridMaper.InitializeMap();
 
 
@@ -288,7 +288,7 @@ int main() {
 
 	//find scanning region of each node (site)
 	//while(iLoopCount!=10 && bOverFlag){
-    while(bOverFlag){
+    while(iLoopCount != 3 && bOverFlag){
 		//judgement
 		bOverFlag = false;
 	    //robot location
@@ -311,7 +311,7 @@ int main() {
 			          pAllObstacleCloud, pAllBoundCloud, pAllTravelCloud);
 
 		//generate a GHPR object
-		GHPR oGHPRer(3.6);
+		GHPR oGHPRer(3.8);
 		
 		//compute the visibility of point clouds
 		std::vector<int> vVisableIdx = oGHPRer.ComputeVisibility(*pScanCloud, oRobot);
@@ -335,12 +335,32 @@ int main() {
 		}
 
 		oGridMaper.RegionGrow(vNearbyGrids);
-
+		
 		oCofSolver.DistanceTerm(oGridMaper.m_vReWardMap, oRobot, vNearbyGrids, *pAllTravelCloud, vGVTravelPsIdx);
 
-		oCofSolver.OcclusionTerm(oGridMaper.m_vReWardMap, vNearbyGrids, oRobot,
-			                     *pAllTravelCloud, vGridTravelPsIdx, *pAllBoundCloud,
-								 vGridBoundPsIdx,*pAllObstacleCloud,vGridObsPsIdx); 
+		std::vector<pcl::PointXYZ> vVisibilityViews;
+		std::vector<pcl::PointXYZ> vCurVisitedViews;
+		std::cout << "2.5" << std::endl;
+		OLTSPSolver.OutputVisitedNodes(vCurVisitedViews, pAllTravelCloud, vGridTravelPsIdx);
+		std::cout <<"visited viewpoint num: "<< vCurVisitedViews.size() << std::endl;
+		std::cout <<" vCurVisitedViews.size() - 1: " << vCurVisitedViews.size() - 1 << std::endl;
+		std::cout <<" vCurVisitedViews.size() - 2: " << int(vCurVisitedViews.size()) - 2 << std::endl;
+
+		for (int i = int(vCurVisitedViews.size()) - 1; i >= 0 && i>= int(vCurVisitedViews.size())-2;--i) {
+		
+			pcl::PointXYZ oOnePoint;
+			oOnePoint.x = vCurVisitedViews[i].x;
+			oOnePoint.y = vCurVisitedViews[i].y;
+			oOnePoint.z = vCurVisitedViews[i].z + ROBOT_HEIGHT;
+			vVisibilityViews.push_back(oOnePoint);
+			std::cout << "got it" << std::endl;
+		}
+
+		if(vVisibilityViews.size()){
+		oCofSolver.OcclusionTerm(oGridMaper.m_vReWardMap, vNearbyGrids, vVisibilityViews,
+			                     *pAllTravelCloud, vGVTravelPsIdx, *pAllBoundCloud,
+			                     vGVBoundPsIdx,*pAllObstacleCloud, vGVObsPsIdx);
+        }
 
 		oCofSolver.ComputeTotalCoffidence(oGridMaper.m_vReWardMap, vNearbyGrids);
 
@@ -384,7 +404,7 @@ int main() {
 				for (int j = 0; j != vGVTravelPsIdx[i].size(); ++j) {
 
 					pKnownCloud->points.push_back(pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]]);
-					vConfidenceValue.push_back(oGridMaper.m_vReWardMap[i].totalValue);
+					vConfidenceValue.push_back(oGridMaper.m_vReWardMap[i].visibility);
 
 					//record the data in txt file for test
 					//oRecordedFile << pAllCloud->points[vAllTravelIdx[vGridTravelPsIdx[i][j]]].x << " "
@@ -471,8 +491,8 @@ int main() {
 		arrowstream >> arrowNumLabel;
 		vViewPoints[i].z = vViewPoints[i].z + ROBOT_HEIGHT;
 		viewer->addSphere(vViewPoints[i], 0.2, float(i + 1) / float(vViewPoints.size()), float(i + 1) / float(vViewPoints.size()), float(i + 1) / float(vViewPoints.size()), numlabel.c_str());
-		if (i)
-			viewer->addArrow(vViewPoints[i], vViewPoints[i - 1], 0.0, 0.0, 1.0, false, arrowNumLabel.c_str());
+		//if (i)
+		//	viewer->addArrow(vViewPoints[i], vViewPoints[i - 1], 0.0, 0.0, 1.0, false, arrowNumLabel.c_str());
 	}
 
 	for (int i = 0; i != vUnVisitedView.size(); ++i) {
@@ -488,10 +508,10 @@ int main() {
 
 		vUnVisitedView[i].z = vUnVisitedView[i].z + ROBOT_HEIGHT;
 		viewer->addSphere(vUnVisitedView[i], 0.2, 1.0, 0.0, 0.0, unviewpointnumlabel.c_str());
-		if (i)
-			viewer->addArrow(vUnVisitedView[i], vUnVisitedView[i - 1], 1.0, 0.0, 0.0, false, unArrowNumLabel.c_str());
-		else
-			viewer->addArrow(vUnVisitedView[i], vViewPoints[vViewPoints.size() - 1], 1.0, 0.0, 0.0, false, unArrowNumLabel.c_str());
+		//if (i)
+		//	viewer->addArrow(vUnVisitedView[i], vUnVisitedView[i - 1], 1.0, 0.0, 0.0, false, unArrowNumLabel.c_str());
+		//else
+		//	viewer->addArrow(vUnVisitedView[i], vViewPoints[vViewPoints.size() - 1], 1.0, 0.0, 0.0, false, unArrowNumLabel.c_str());
 	}
 
 	while (!viewer->wasStopped())

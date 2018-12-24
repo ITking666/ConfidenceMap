@@ -298,7 +298,7 @@ void TSP::OutputVisitedNodes(std::vector<int> & vOutputNodes){
 
 }
 
-void TSP::OutputVisitedNodes(std::vector<pcl::PointXYZ> & vOutputNodes,
+int TSP::OutputVisitedNodes(std::vector<pcl::PointXYZ> & vOutputNodes,
 	const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 	const std::vector<std::vector<int>> & vGridPointIdx){
 
@@ -312,11 +312,10 @@ void TSP::OutputVisitedNodes(std::vector<pcl::PointXYZ> & vOutputNodes,
 			ComputeCentersPosition(pCloud, vGridPointIdx, m_vVisitedNodeIdx[i]);
 
 		vOutputNodes.push_back(oCenter);
-		std::cout<<"ith  "<<i<<std::endl;
-		std::cout<<"x: "<<oCenter.x<<std::endl;
-		std::cout<<"y: "<<oCenter.y<<std::endl;
-		std::cout<<"z: "<<oCenter.z<<std::endl;
+
 	}
+
+	return m_vVisitedNodeIdx.size();
 
 }
 

@@ -2,6 +2,7 @@
 #define CONFIDENCE_H 
 #include "GridMap.h"
 #include "GHPR.h"
+
 ///************************************************************************///
 // a class to implement the Gaussian Process Regression algorithm
 // created and edited by Huang Pengdi
@@ -25,13 +26,18 @@ class Confidence {
 public:
 
 	//constructor
-	Confidence(float f_fSigma);
+	Confidence(float f_fSigma,
+		       float f_fGHPRParam = 4.2,
+		       float f_fVisTermThr = 2);
 	
 	//destructor
 	~Confidence();
 
 	//set the affect radius of Gaussian Kernel
 	void SetSigmaValue(const float & f_fSigma);
+
+	//set visibility term related paramters
+	void SetVisParas(const float & f_fGHPRParam, const float & f_fVisTermThr);
 
 	//*******************Mathematical Formula Part********************
 	
@@ -107,6 +113,14 @@ private:
 
 	//sigma parameter of Gaussian function in GaussianKernel()
 	float m_fSigma;
+	
+	//visibility term based paramters
+	float m_fGHPRParam;///<parameter of GHPR algorithm
+	float m_fVisTermThr;///<the threshold of visibility term
+
+	//weighted of each term for total confidence value
+	const float m_fWeightDis;
+	const float m_fWeightVis;
 
 };
 

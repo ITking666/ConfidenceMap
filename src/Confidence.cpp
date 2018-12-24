@@ -13,10 +13,15 @@ Output: none
 Return: none
 Others: none
 *************************************************/
-Confidence::Confidence(float f_fSigma)
-{
+Confidence::Confidence(float f_fSigma,
+	                   float f_fGHPRParam,
+	                  float f_fVisTermThr):
+	                     m_fWeightDis(0.9),
+                         m_fWeightVis(0.1){
 
 	SetSigmaValue(f_fSigma);
+
+	SetVisParas(f_fGHPRParam, f_fVisTermThr);
 
 }
 
@@ -55,6 +60,30 @@ void Confidence::SetSigmaValue(const float & f_fSigma) {
 	m_fSigma = f_fSigma;
 
 }
+
+/*************************************************
+Function: SetVisParas
+Description: set value to the parameters related to visibility term
+Calls: none
+Called By: Confidence
+Table Accessed: none
+Table Updated: none
+Input: f_fGHPRParam - a parameter of GHPR algorithm
+      f_fVisTermThr - a threshold of visibility value
+Output: m_fGHPRParam
+        m_fVisTermThr
+Return: none
+Others: none
+*************************************************/
+void Confidence::SetVisParas(const float & f_fGHPRParam, 
+	                         const float & f_fVisTermThr){
+
+	m_fGHPRParam = f_fGHPRParam;
+
+	m_fVisTermThr = f_fVisTermThr;
+
+}
+
 
 /*************************************************
 Function: VectorInnerProduct
@@ -501,7 +530,7 @@ void Confidence::OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
 
 
 	//std::vector<int> vVisableIdx = ComputeVisibility(*pOccCloud, oRobotPoint);
-	GHPR oGHPRer(3.6);
+	GHPR oGHPRer(m_fGHPRParam);
 
 	for (int i = 0; i != vHistoryViewPoints.size(); ++i) {
 	
@@ -512,6 +541,31 @@ void Confidence::OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
 	    //compute the visibility based on the history of view points
 		std::vector<int> vVisableIdx = oGHPRer.ComputeVisibility(*pOccCloud, vHistoryViewPoints[i]);
 	
+		//std::stringstream teststream;
+		//teststream << RECORDNUM <<"_"<<i<< "Res.txt";
+		//std::cout << teststream.str() <<" point size:  " << pOccCloud->points.size() << std::endl;
+		//std::string testfilename;
+		//teststream >> testfilename;
+		//std::ofstream oRecordedFile;
+		//oRecordedFile.open(testfilename.c_str(), std::ios::out | std::ios::app);
+		//std::vector<int> vRes(pOccCloud->points.size(),0);
+		//for (int i = 0; i != vVisableIdx.size(); ++i)
+		//	vRes[vVisableIdx[i]] = 1;
+
+		//for (int i=0;i!= pOccCloud->points.size();++i){
+		////record the data in txt file for test
+		//oRecordedFile << pOccCloud->points[i].x << " "
+		//	          << pOccCloud->points[i].y << " "
+		//	          << pOccCloud->points[i].z << " "
+		//	          << vRes[i] << " "
+		//	          << std::endl;
+		//}
+		//oRecordedFile << vHistoryViewPoints[i].x << " "
+		//	<< vHistoryViewPoints[i].y << " "
+		//	<< vHistoryViewPoints[i].z << " "
+		//	<< 2 << " "
+		//	<< std::endl;
+
 		//visibility result assignment 
 		for (int j = 0; j != vVisableIdx.size(); ++j){
 		
@@ -529,9 +583,12 @@ void Confidence::OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
 			 if(vNearGridOccValue[i])
 			    vReWardMap[vNeighborGrids[i]].visibility += 1.0;
 
+			 //if the visibility value is up to upper bound
+			 if (vReWardMap[vNeighborGrids[i]].visibility > m_fVisTermThr)
+				 vReWardMap[vNeighborGrids[i]].visibility = m_fVisTermThr;
 	    }
 
-	}//end for (int i = 0; i != vHistoryViewPoints.size(); ++i) {
+	}//end for (int i = 0; i != vHistoryViewPoints.size(); ++i) 
 
 }
 
@@ -664,8 +721,9 @@ void Confidence::ComputeTotalCoffidence(std::vector<CofidenceValue> & vReWardMap
 		//if this region is a ground point 
 		if (vReWardMap[iQueryIdx].iLabel == 2) {
 			//the grid is known
-			if(vReWardMap[iQueryIdx].bKnownFlag)
-			   vReWardMap[iQueryIdx].totalValue = vReWardMap[iQueryIdx].disTermVal * vReWardMap[iQueryIdx].visibility;
+			if (vReWardMap[iQueryIdx].bKnownFlag)
+			    vReWardMap[iQueryIdx].totalValue = m_fWeightDis * vReWardMap[iQueryIdx].disTermVal 
+				                                 + m_fWeightVis * vReWardMap[iQueryIdx].visibility;
 			
 		}//end if vReWardMap[iQueryIdx].iLabel == 2
 	}//end for i = 0

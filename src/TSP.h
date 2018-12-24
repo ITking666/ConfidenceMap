@@ -54,7 +54,7 @@ public:
 
 	//Outout the history of traveling nodes
 	void OutputVisitedNodes(std::vector<int> & vOutputNodes);
-	void OutputVisitedNodes(std::vector<pcl::PointXYZ> & vOutputNodes,
+	int OutputVisitedNodes(std::vector<pcl::PointXYZ> & vOutputNodes,
 		                    const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 		                    const std::vector<std::vector<int>> & vGridPointIdx);
 
