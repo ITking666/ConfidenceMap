@@ -183,7 +183,7 @@ int main() {
 	//read data
 	std::vector<std::vector<double> > vRawData;
 	//read data for data file
-	ReadMatrix("test.txt", vRawData);
+	ReadMatrix("test2.txt", vRawData);
 	std::cout << "Reading data completed!" << std::endl;
 
 	//all point clouds
@@ -248,11 +248,11 @@ int main() {
 	std::vector<std::vector<int>> vGridObsPsIdx;
 
 
-	GridMap oGridMaper(0.5, 500.0, ROBOT_AFFECTDIS*0.5, 0.6);
+	GridMap oGridMaper(0.5, 500.0, ROBOT_AFFECTDIS*0.66666, 0.8);
 	oGridMaper.InitializeMap();
 
 
-	Confidence oCofSolver(ROBOT_AFFECTDIS);
+	Confidence oCofSolver(ROBOT_AFFECTDIS,4.2,5);
 
 	//the scanning label in simulation
 	std::vector<PVGridStatus> vObstacleScan(pAllObstacleCloud->points.size());
@@ -288,7 +288,7 @@ int main() {
 
 	//find scanning region of each node (site)
 	//while(iLoopCount!=10 && bOverFlag){
-    while(iLoopCount != 3 && bOverFlag){
+    while(bOverFlag){
 		//judgement
 		bOverFlag = false;
 	    //robot location
@@ -346,7 +346,7 @@ int main() {
 		std::cout <<" vCurVisitedViews.size() - 1: " << vCurVisitedViews.size() - 1 << std::endl;
 		std::cout <<" vCurVisitedViews.size() - 2: " << int(vCurVisitedViews.size()) - 2 << std::endl;
 
-		for (int i = int(vCurVisitedViews.size()) - 1; i >= 0 && i>= int(vCurVisitedViews.size())-2;--i) {
+		for (int i = int(vCurVisitedViews.size()) - 1; i >= 0 && i>= int(vCurVisitedViews.size())-1;--i) {
 		
 			pcl::PointXYZ oOnePoint;
 			oOnePoint.x = vCurVisitedViews[i].x;
@@ -383,8 +383,8 @@ int main() {
 	//***************output***************
 
 	//ouput file
-	//std::ofstream oRecordedFile;
-	//oRecordedFile.open("res.txt", std::ios::out | std::ios::app);
+	std::ofstream oRecordedFile;
+	oRecordedFile.open("res.txt", std::ios::out | std::ios::app);
 
 	//display
 	pcl::PointCloud<pcl::PointXYZ>::Ptr pKnownCloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -404,19 +404,20 @@ int main() {
 				for (int j = 0; j != vGVTravelPsIdx[i].size(); ++j) {
 
 					pKnownCloud->points.push_back(pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]]);
-					vConfidenceValue.push_back(oGridMaper.m_vReWardMap[i].visibility);
-
+					vConfidenceValue.push_back(oGridMaper.m_vReWardMap[i].totalValue);
 					//record the data in txt file for test
-					//oRecordedFile << pAllCloud->points[vAllTravelIdx[vGridTravelPsIdx[i][j]]].x << " "
-					//	          << pAllCloud->points[vAllTravelIdx[vGridTravelPsIdx[i][j]]].y << " "
-					//	          << pAllCloud->points[vAllTravelIdx[vGridTravelPsIdx[i][j]]].z << " "
-					//	          << oGridMaper.m_vReWardMap[i].totalValue << " "
-					//	          << std::endl;
-
+					oRecordedFile   << pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].x << " "
+					            	<< pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].y << " "
+					            	<< pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].z << " "
+						            << oGridMaper.m_vReWardMap[i].disTermVal << " "
+						            << oGridMaper.m_vReWardMap[i].visibility << " "
+						            << oGridMaper.m_vReWardMap[i].totalValue << " "
+						            << std::endl;
 
 				}//end for j
-			}
-			else {
+			
+			}else {
+
 				for (int j = 0; j != vGVTravelPsIdx[i].size(); ++j) {
 
 					pBackgroundCloud->points.push_back(pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]]);
@@ -445,7 +446,8 @@ int main() {
 	}
 
 	std::cout << "4" << std::endl;
-	
+
+
 	//std::vector<int> vLabels(pAllCloud->points.size(),0);
 	//for(int i=0;i!= oGridMaper.m_vReWardMap.size();++i){
 
@@ -491,8 +493,8 @@ int main() {
 		arrowstream >> arrowNumLabel;
 		vViewPoints[i].z = vViewPoints[i].z + ROBOT_HEIGHT;
 		viewer->addSphere(vViewPoints[i], 0.2, float(i + 1) / float(vViewPoints.size()), float(i + 1) / float(vViewPoints.size()), float(i + 1) / float(vViewPoints.size()), numlabel.c_str());
-		//if (i)
-		//	viewer->addArrow(vViewPoints[i], vViewPoints[i - 1], 0.0, 0.0, 1.0, false, arrowNumLabel.c_str());
+		if (i)
+			viewer->addArrow(vViewPoints[i], vViewPoints[i - 1], 0.0, 0.0, 1.0, false, arrowNumLabel.c_str());
 	}
 
 	for (int i = 0; i != vUnVisitedView.size(); ++i) {
@@ -508,10 +510,10 @@ int main() {
 
 		vUnVisitedView[i].z = vUnVisitedView[i].z + ROBOT_HEIGHT;
 		viewer->addSphere(vUnVisitedView[i], 0.2, 1.0, 0.0, 0.0, unviewpointnumlabel.c_str());
-		//if (i)
-		//	viewer->addArrow(vUnVisitedView[i], vUnVisitedView[i - 1], 1.0, 0.0, 0.0, false, unArrowNumLabel.c_str());
-		//else
-		//	viewer->addArrow(vUnVisitedView[i], vViewPoints[vViewPoints.size() - 1], 1.0, 0.0, 0.0, false, unArrowNumLabel.c_str());
+		if (i)
+			viewer->addArrow(vUnVisitedView[i], vUnVisitedView[i - 1], 1.0, 0.0, 0.0, false, unArrowNumLabel.c_str());
+		else
+			viewer->addArrow(vUnVisitedView[i], vViewPoints[vViewPoints.size() - 1], 1.0, 0.0, 0.0, false, unArrowNumLabel.c_str());
 	}
 
 	while (!viewer->wasStopped())

@@ -16,8 +16,8 @@ Others: none
 Confidence::Confidence(float f_fSigma,
 	                   float f_fGHPRParam,
 	                  float f_fVisTermThr):
-	                     m_fWeightDis(0.9),
-                         m_fWeightVis(0.1){
+	                     m_fWeightDis(0.75),
+                         m_fWeightVis(0.25){
 
 	SetSigmaValue(f_fSigma);
 
@@ -135,6 +135,31 @@ inline float Confidence::GaussianKernel(const pcl::PointXYZ & oQueryPo,
 	//ouput equation result
 	return exp(-1.0f * fNormSquare / pow(sigma,2.0f));
 	
+}
+
+/*************************************************
+Function: LinearKernel
+Description: This is a Linear Kernel Function to compute the visibility value 
+Calls: none
+Called By: 
+Table Accessed: none
+Table Updated: none
+Input: fTargetVal - input of linear function
+	   fThrVal - the threshold of linear function,
+	   the value will be 1 if input is larger than this one 
+Output: the respond of linear function
+Return: float computed value
+Others: none
+*************************************************/
+inline float Confidence::LinearKernel(const float & fTargetVal,
+	                         const float & fThrVal){
+
+	//if the input value is smaller than the given threshold 
+	if (fTargetVal < fThrVal)
+		return fTargetVal / fThrVal;
+	else
+		return 1.0;
+
 }
 
 /*************************************************
@@ -417,9 +442,6 @@ void Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWardMap,
 		//get maximum value of distance term
 		if(vReWardMap[vNeighborGrids[i]].disTermVal < vDisPartValue[i] * vCenterPartValue[i])
 		   vReWardMap[vNeighborGrids[i]].disTermVal = vDisPartValue[i] * vCenterPartValue[i];
-		//here is the case that only distance item works
-		//if(vReWardMap[vNeighborGrids[i]].disTermVal < vDisPartValue[i])
-		//   vReWardMap[vNeighborGrids[i]].disTermVal = vDisPartValue[i];
 		
 	}
 
@@ -583,9 +605,6 @@ void Confidence::OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
 			 if(vNearGridOccValue[i])
 			    vReWardMap[vNeighborGrids[i]].visibility += 1.0;
 
-			 //if the visibility value is up to upper bound
-			 if (vReWardMap[vNeighborGrids[i]].visibility > m_fVisTermThr)
-				 vReWardMap[vNeighborGrids[i]].visibility = m_fVisTermThr;
 	    }
 
 	}//end for (int i = 0; i != vHistoryViewPoints.size(); ++i) 
@@ -722,8 +741,8 @@ void Confidence::ComputeTotalCoffidence(std::vector<CofidenceValue> & vReWardMap
 		if (vReWardMap[iQueryIdx].iLabel == 2) {
 			//the grid is known
 			if (vReWardMap[iQueryIdx].bKnownFlag)
-			    vReWardMap[iQueryIdx].totalValue = m_fWeightDis * vReWardMap[iQueryIdx].disTermVal 
-				                                 + m_fWeightVis * vReWardMap[iQueryIdx].visibility;
+				vReWardMap[iQueryIdx].totalValue = m_fWeightDis * vReWardMap[iQueryIdx].disTermVal
+				+ m_fWeightVis * LinearKernel(vReWardMap[iQueryIdx].visibility, m_fVisTermThr);
 			
 		}//end if vReWardMap[iQueryIdx].iLabel == 2
 	}//end for i = 0

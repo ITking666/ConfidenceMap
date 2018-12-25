@@ -28,7 +28,7 @@ public:
 	//constructor
 	Confidence(float f_fSigma,
 		       float f_fGHPRParam = 4.2,
-		       float f_fVisTermThr = 2);
+		       float f_fVisTermThr = 5);
 	
 	//destructor
 	~Confidence();
@@ -48,6 +48,9 @@ public:
 	inline float GaussianKernel(const pcl::PointXYZ & oQueryPo,
 		                       const pcl::PointXYZ & oTargerPo,
 		                                         float & sigma);
+	//linear Kernel Function
+	inline float LinearKernel(const float & fTargetVal,
+	                        	const float & fThrVal);
 
 	//the 2 norm of a vector
 	inline float Compute2Norm(const pcl::PointXYZ & oQueryPo,
