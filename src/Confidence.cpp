@@ -179,19 +179,19 @@ Others: none
 inline float Confidence::StandardDeviation(const PCLCloudXYZ & vCloud,
 	                                       const std::vector<int> & vPointIdx){
 
-	//
+	//define output
 	float fSDeviation = 0.0;
 
-	//
+	//compute the mean value of point set
 	pcl::PointXYZ oMeanPoint = ComputeCenter(vCloud,vPointIdx);
 	for (int i = 0; i != vCloud.points.size(); ++i) {
-	
+	    //accumulation
 		fSDeviation += ComputeSquareNorm(oMeanPoint, vCloud.points[vPointIdx[i]]);
 
 	}
 
 	//compute the standard deviation
-	fSDeviation = sqrt(fSDeviation)/ float(vCloud.points.size());
+	fSDeviation = sqrt(fSDeviation/ float(vCloud.points.size()));
 
 	return fSDeviation;
 
@@ -211,10 +211,60 @@ Output: the respond of linear function
 Return: float computed value
 Others: none
 *************************************************/
-inline float Confidence::ComputeDensity(const PCLCloudXYZPtr & vGridPoints){
+inline float Confidence::ComputeDensity(const PCLCloudXYZ & vCloud,
+	                             const std::vector<int> & vPointIdx,
+								                   int iSampleTimes,
+								                       bool bKDFlag){
 
+	//use the kdtree structureto compute density if bKDFlag is true
+	if(bKDFlag){
 
+		//if point number is very small
+		if(vPointIdx.size() < iSampleTimes)
+			return 1.0;//it is neighborhood is onlt itself
+		
+		PCLCloudXYZPtr pGridCloud(new PCLCloudXYZ);
+		//construct a point clouds
+	    pGridCloud->width = vPointIdx.size();
+	    pGridCloud->height = 1;
+	    pGridCloud->is_dense = false;
+	    pGridCloud->points.resize(pGridCloud->width * pGridCloud->height);
 
+		for(int i = 0;i != vPointIdx.size(); ++i){
+
+			//
+			int iPointIdx = vPointIdx[i];
+			pGridCloud->points[i].x = vCloud.points[iPointIdx].x;
+			pGridCloud->points[i].y = vCloud.points[iPointIdx].y;
+			pGridCloud->points[i].z = vCloud.points[iPointIdx].z;
+		}
+
+		//construct a kdtree
+	    pcl::KdTreeFLANN<pcl::PointXYZ> oGridCloudTree;
+	    oGridCloudTree.setInputCloud(pGridCloud);
+		
+		int iNeighPNums = 0;
+
+		//find indices using kdtree
+	    for (size_t i = 0; i != iSampleTimes; ++i) {
+
+		//define temps
+		std::vector<int> vNearestIdx;
+		std::vector<float> vNearestDis;
+		
+		//search the nearest raw point of query constructed convex hull surface point 
+		oGridCloudTree.radiusSearch(pGridCloud->points[i], 0.2, vNearestIdx, vNearestDis);
+		
+		iNeighPNums += vNearestIdx.size();
+		
+		}//end for i != pHullCloud->points.size()
+
+		return float(iNeighPNums)/float(iSampleTimes);
+
+	}else{//ouput the point number directly in false model
+	
+		return float(vPointIdx.size());
+	}
 
 }
 

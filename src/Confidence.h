@@ -57,7 +57,10 @@ public:
 		                           const std::vector<int> & vPointIdx);
 
 	//density
-	inline float ComputeDensity(const PCLCloudXYZPtr & vGridPoints);
+	inline float ComputeDensity(const PCLCloudXYZ & vCloud,
+	                            const std::vector<int> & vPointIdx,
+								int iSampleTimes = 5,
+								bool bKDFlag = true);
 
 
 	//the 2 norm of a vector
