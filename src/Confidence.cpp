@@ -16,8 +16,8 @@ Others: none
 Confidence::Confidence(float f_fSigma,
 	                   float f_fGHPRParam,
 	                  float f_fVisTermThr):
-	                     m_fWeightDis(0.75),
-                         m_fWeightVis(0.25){
+	                     m_fWeightDis(0.7),
+                         m_fWeightVis(0.3){
 
 	SetSigmaValue(f_fSigma);
 
@@ -163,6 +163,63 @@ inline float Confidence::LinearKernel(const float & fTargetVal,
 }
 
 /*************************************************
+Function: StandardDeviation
+Description: This is a Linear Kernel Function to compute the visibility value
+Calls: none
+Called By:
+Table Accessed: none
+Table Updated: none
+Input: fTargetVal - input of linear function
+fThrVal - the threshold of linear function,
+the value will be 1 if input is larger than this one
+Output: the respond of linear function
+Return: float computed value
+Others: none
+*************************************************/
+inline float Confidence::StandardDeviation(const PCLCloudXYZ & vCloud,
+	                                       const std::vector<int> & vPointIdx){
+
+	//
+	float fSDeviation = 0.0;
+
+	//
+	pcl::PointXYZ oMeanPoint = ComputeCenter(vCloud,vPointIdx);
+	for (int i = 0; i != vCloud.points.size(); ++i) {
+	
+		fSDeviation += ComputeSquareNorm(oMeanPoint, vCloud.points[vPointIdx[i]]);
+
+	}
+
+	//compute the standard deviation
+	fSDeviation = sqrt(fSDeviation)/ float(vCloud.points.size());
+
+	return fSDeviation;
+
+}
+
+/*************************************************
+Function: ComputeDensity
+Description: This is a Linear Kernel Function to compute the visibility value
+Calls: none
+Called By:
+Table Accessed: none
+Table Updated: none
+Input: fTargetVal - input of linear function
+fThrVal - the threshold of linear function,
+the value will be 1 if input is larger than this one
+Output: the respond of linear function
+Return: float computed value
+Others: none
+*************************************************/
+inline float Confidence::ComputeDensity(const PCLCloudXYZPtr & vGridPoints){
+
+
+
+
+}
+
+
+/*************************************************
 Function: Compute2Norm
 Description: compute the Euclidean distance between two points
 Calls: none
@@ -185,8 +242,8 @@ inline float Confidence::Compute2Norm(const pcl::PointXYZ & oQueryPo, const pcl:
 }
 
 /*************************************************
-Function: Compute1Norm
-Description: compute the Euclidean distance between two points
+Function: ComputeSquareNorm
+Description: compute the square of norm
 Calls: none
 Called By: GaussianKernel
 Table Accessed: none
@@ -197,11 +254,11 @@ Output: the Euclidean distance value between two points
 Return: a distance value 
 Others: This function is the same with ComputeEuclideanDis, but it is an online one
 *************************************************/
-inline float Confidence::Compute1Norm(const pcl::PointXYZ & oQueryPo, const pcl::PointXYZ & oTargerPo){
+inline float Confidence::ComputeSquareNorm(const pcl::PointXYZ & oQueryPo, const pcl::PointXYZ & oTargerPo){
 
-	return sqrt(pow(oQueryPo.x - oTargerPo.x, 2.0f)
-		      + pow(oQueryPo.y - oTargerPo.y, 2.0f)
-	          + pow(oQueryPo.z - oTargerPo.z, 2.0f));
+	return pow(oQueryPo.x - oTargerPo.x, 2.0f)
+		     + pow(oQueryPo.y - oTargerPo.y, 2.0f)
+	         + pow(oQueryPo.z - oTargerPo.z, 2.0f);
 
 }
 

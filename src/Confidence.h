@@ -52,13 +52,21 @@ public:
 	inline float LinearKernel(const float & fTargetVal,
 	                        	const float & fThrVal);
 
+	//variance
+	inline float StandardDeviation(const PCLCloudXYZ & vCloud,
+		                           const std::vector<int> & vPointIdx);
+
+	//density
+	inline float ComputeDensity(const PCLCloudXYZPtr & vGridPoints);
+
+
 	//the 2 norm of a vector
 	inline float Compute2Norm(const pcl::PointXYZ & oQueryPo,
 		                     const pcl::PointXYZ & oTargerPo);
 
 	//the 1 norm of a vector
-	inline float Compute1Norm(const pcl::PointXYZ & oQueryPo,
-		                     const pcl::PointXYZ & oTargerPo);
+	inline float ComputeSquareNorm(const pcl::PointXYZ & oQueryPo,
+		                           const pcl::PointXYZ & oTargerPo);
 
 	//compute center
 	inline pcl::PointXYZ ComputeCenter(const PCLCloudXYZ & vCloud,

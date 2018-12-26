@@ -183,7 +183,7 @@ int main() {
 	//read data
 	std::vector<std::vector<double> > vRawData;
 	//read data for data file
-	ReadMatrix("test2.txt", vRawData);
+	ReadMatrix("test.txt", vRawData);
 	std::cout << "Reading data completed!" << std::endl;
 
 	//all point clouds
@@ -248,7 +248,7 @@ int main() {
 	std::vector<std::vector<int>> vGridObsPsIdx;
 
 
-	GridMap oGridMaper(0.5, 500.0, ROBOT_AFFECTDIS*0.66666, 0.8);
+	GridMap oGridMaper(0.5, 500.0, ROBOT_AFFECTDIS*0.5, 0.8);
 	oGridMaper.InitializeMap();
 
 
