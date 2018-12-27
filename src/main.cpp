@@ -362,6 +362,10 @@ int main() {
 			                     vGVBoundPsIdx,*pAllObstacleCloud, vGVObsPsIdx);
         }
 
+		oCofSolver.QualityTerm(oGridMaper.m_vReWardMap, vNearbyGrids,
+		                    	*pAllTravelCloud, vGVTravelPsIdx, *pAllBoundCloud,
+			                     vGVBoundPsIdx, *pAllObstacleCloud, vGVObsPsIdx);
+
 		oCofSolver.ComputeTotalCoffidence(oGridMaper.m_vReWardMap, vNearbyGrids);
 
 		//using the minimum suppression
@@ -411,6 +415,7 @@ int main() {
 					            	<< pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].z << " "
 						            << oGridMaper.m_vReWardMap[i].disTermVal << " "
 						            << oGridMaper.m_vReWardMap[i].visibility << " "
+						            << oGridMaper.m_vReWardMap[i].quality << " "
 						            << oGridMaper.m_vReWardMap[i].totalValue << " "
 						            << std::endl;
 

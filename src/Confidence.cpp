@@ -17,11 +17,14 @@ Confidence::Confidence(float f_fSigma,
 	                   float f_fGHPRParam,
 	                  float f_fVisTermThr):
 	                     m_fWeightDis(0.7),
-                         m_fWeightVis(0.3){
+                         m_fWeightVis(0.3),
+	                      m_fDensityR(0.3){
 
 	SetSigmaValue(f_fSigma);
 
 	SetVisParas(f_fGHPRParam, f_fVisTermThr);
+
+	srand((unsigned)time(NULL));
 
 }
 
@@ -170,8 +173,8 @@ Called By:
 Table Accessed: none
 Table Updated: none
 Input: fTargetVal - input of linear function
-fThrVal - the threshold of linear function,
-the value will be 1 if input is larger than this one
+          fThrVal - the threshold of linear function,
+          the value will be 1 if input is larger than this one
 Output: the respond of linear function
 Return: float computed value
 Others: none
@@ -212,7 +215,6 @@ Return: float computed value
 Others: none
 *************************************************/
 inline float Confidence::ComputeDensity(const PCLCloudXYZ & vCloud,
-	                             const std::vector<int> & vPointIdx,
 								                   int iSampleTimes,
 								                       bool bKDFlag){
 
@@ -220,42 +222,45 @@ inline float Confidence::ComputeDensity(const PCLCloudXYZ & vCloud,
 	if(bKDFlag){
 
 		//if point number is very small
-		if(vPointIdx.size() < iSampleTimes)
+		if(vCloud.points.size() < iSampleTimes)
 			return 1.0;//it is neighborhood is onlt itself
 		
 		PCLCloudXYZPtr pGridCloud(new PCLCloudXYZ);
 		//construct a point clouds
-	    pGridCloud->width = vPointIdx.size();
+	    pGridCloud->width = vCloud.points.size();
 	    pGridCloud->height = 1;
 	    pGridCloud->is_dense = false;
 	    pGridCloud->points.resize(pGridCloud->width * pGridCloud->height);
 
-		for(int i = 0;i != vPointIdx.size(); ++i){
+		for(int i = 0;i != vCloud.size(); ++i){
 
-			//
-			int iPointIdx = vPointIdx[i];
-			pGridCloud->points[i].x = vCloud.points[iPointIdx].x;
-			pGridCloud->points[i].y = vCloud.points[iPointIdx].y;
-			pGridCloud->points[i].z = vCloud.points[iPointIdx].z;
+			pGridCloud->points[i].x = vCloud.points[i].x;
+			pGridCloud->points[i].y = vCloud.points[i].y;
+			pGridCloud->points[i].z = vCloud.points[i].z;
 		}
 
 		//construct a kdtree
 	    pcl::KdTreeFLANN<pcl::PointXYZ> oGridCloudTree;
 	    oGridCloudTree.setInputCloud(pGridCloud);
 		
+		//get the random query index of point
+		std::vector<int> vQueryIndices = GetRandom(pGridCloud->points.size(), iSampleTimes);
+
+		//total point number
 		int iNeighPNums = 0;
 
 		//find indices using kdtree
-	    for (size_t i = 0; i != iSampleTimes; ++i) {
-
-		//define temps
-		std::vector<int> vNearestIdx;
-		std::vector<float> vNearestDis;
-		
-		//search the nearest raw point of query constructed convex hull surface point 
-		oGridCloudTree.radiusSearch(pGridCloud->points[i], 0.2, vNearestIdx, vNearestDis);
-		
-		iNeighPNums += vNearestIdx.size();
+	    for (size_t i = 0; i != vQueryIndices.size(); ++i) {
+			
+			//define temps
+			std::vector<int> vNearestIdx;
+			std::vector<float> vNearestDis;
+			
+			//search the nearest raw point of query constructed convex hull surface point 
+			oGridCloudTree.radiusSearch(pGridCloud->points[vQueryIndices[i]], 0.3, vNearestIdx, vNearestDis);
+			
+			//accumulation
+			iNeighPNums += vNearestIdx.size();
 		
 		}//end for i != pHullCloud->points.size()
 
@@ -263,7 +268,7 @@ inline float Confidence::ComputeDensity(const PCLCloudXYZ & vCloud,
 
 	}else{//ouput the point number directly in false model
 	
-		return float(vPointIdx.size());
+		return float(vCloud.points.size());
 	}
 
 }
@@ -388,6 +393,70 @@ pcl::PointXYZ  Confidence::ComputeCenter(const PCLCloudXYZ & vCloud){
 
 	//output
 	return oCenter;
+
+}
+
+
+/*************************************************
+Function: GetRandom
+Description: compute the Euclidean distance between two points
+Calls: none
+Called By: main function of project or other classes
+Table Accessed: none
+Table Updated: none
+Input: oQueryPoint - the query point (based point)
+oTargetPoint - the target point
+Output: the distance value
+Return: a distance value
+Others: This function is the same with Compute1Norm, but it is a static one
+*************************************************/
+std::vector<int>  Confidence::GetRandom(const unsigned int iSize,
+		                                  const int iSampleNums){
+
+	//define output vector
+	std::vector<int> vAllValueVec(iSize, 0);
+
+	//get all of value
+	for (int i = 0; i != iSize; ++i)
+		vAllValueVec[i] = i;
+
+	//if the sampling number is larger than the size of total number
+	if (iSize <= iSampleNums) {
+
+		return vAllValueVec;
+
+	}
+
+	//the last number
+	int iLastIdx = iSize - 1;
+	int iCurSampNum = 0;
+
+	//get the random value
+	while (iSampleNums - iCurSampNum) {
+
+		//defend repeat selection
+		int iRandomRes = (rand() % (iLastIdx - iCurSampNum + 1));
+			
+		//exchange the last one of unselected value and current randon selected value
+		int iTempValue = vAllValueVec[iRandomRes];
+		vAllValueVec[iRandomRes] = vAllValueVec[iLastIdx - iCurSampNum];
+		vAllValueVec[iLastIdx - iCurSampNum] = iTempValue;
+		//count
+		iCurSampNum++;
+
+	}//while
+
+	//get the last iCurSampNum value of total value
+	std::vector<int> iRandomVec;
+	iRandomVec.reserve(iCurSampNum);
+	for (int i = iLastIdx; i != (iLastIdx - iCurSampNum); --i) {
+
+		iRandomVec.push_back(vAllValueVec[i]);
+
+	}
+
+	//over
+	return iRandomVec;
 
 }
 
@@ -572,16 +641,38 @@ Return: a vector saves distance value of each neighboring grid
 Others: none
 *************************************************/
 void Confidence::QualityTerm(std::vector<CofidenceValue> & vReWardMap,
-	                                const pcl::PointXYZ & oRobotPoint,
-	                          const std::vector<int> & vNeighborGrids,
-	                                 const PCLCloudXYZ & vTravelCloud,
-	           const std::vector<std::vector<int>> & vGridTravelPsIdx) {
+                               const std::vector<int> & vNeighborGrids,
+	                                  const PCLCloudXYZ & vTravelCloud,
+	            const std::vector<std::vector<int>> & vGridTravelPsIdx,
+	                                const PCLCloudXYZ & vAllBoundCloud,
+	             const std::vector<std::vector<int>> & vGridBoundPsIdx,
+	                                const PCLCloudXYZ & vObstacleCloud,
+	               const std::vector<std::vector<int>> & vGridObsPsIdx) {
 
-	//define output
-	std::vector<float> vDisRes;
-	vDisRes.resize(vGridTravelPsIdx.size(), 0.0);
+	//point clouds to be seen
+	PCLCloudXYZPtr pNearCloud(new PCLCloudXYZ);
 
-	//
+	//save the point that is in an unreachable grid
+	for (int i = 0; i != vNeighborGrids.size(); ++i) {
+
+		int iOneGridIdx = vNeighborGrids[i];
+
+		//record the ground point
+		for (int j = 0; j != vGridTravelPsIdx[iOneGridIdx].size(); ++j)
+			pNearCloud->points.push_back(vTravelCloud.points[vGridTravelPsIdx[iOneGridIdx][j]]);
+
+		//record the boundary point
+		for (int j = 0; j != vGridBoundPsIdx[iOneGridIdx].size(); ++j)
+			pNearCloud->points.push_back(vAllBoundCloud.points[vGridBoundPsIdx[iOneGridIdx][j]]);
+
+		//record the obstacle point
+		for (int j = 0; j != vGridObsPsIdx[iOneGridIdx].size(); ++j)
+			pNearCloud->points.push_back(vObstacleCloud.points[vGridObsPsIdx[iOneGridIdx][j]]);
+		
+		//save the density of each grid
+		vReWardMap[iOneGridIdx].quality = ComputeDensity(*pNearCloud);
+
+	}//end for i
 
 }
 

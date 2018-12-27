@@ -2,6 +2,9 @@
 #define CONFIDENCE_H 
 #include "GridMap.h"
 #include "GHPR.h"
+#include <stdlib.h>
+#include <time.h> 
+
 
 ///************************************************************************///
 // a class to implement the Gaussian Process Regression algorithm
@@ -58,7 +61,6 @@ public:
 
 	//density
 	inline float ComputeDensity(const PCLCloudXYZ & vCloud,
-	                            const std::vector<int> & vPointIdx,
 								int iSampleTimes = 5,
 								bool bKDFlag = true);
 
@@ -76,6 +78,10 @@ public:
 		                       const std::vector<int> & vPointIdx);
 	inline pcl::PointXYZ ComputeCenter(const PCLCloudXYZ & vCloud);
 
+	//get random value
+	inline std::vector<int> GetRandom(const unsigned int iSize,
+		                                 const int iSampleNums);
+
 	//Compute Euclidean distance
 	static float ComputeEuclideanDis(pcl::PointXYZ & oQueryPoint, 
 		                            pcl::PointXYZ & oTargetPoint);
@@ -90,10 +96,13 @@ public:
 
 	//2. quality term of confidence map
 	void QualityTerm(std::vector<CofidenceValue> & vReWardMap,
-		                    const pcl::PointXYZ & oRobotPoint,
 		              const std::vector<int> & vNeighborGrids,
 		                     const PCLCloudXYZ & vTravelCloud,
-	   const std::vector<std::vector<int>> & vGridTravelPsIdx);
+	   const std::vector<std::vector<int>> & vGridTravelPsIdx,
+		                   const PCLCloudXYZ & vAllBoundCloud,
+		const std::vector<std::vector<int>> & vGridBoundPsIdx,
+		                   const PCLCloudXYZ & vObstacleCloud,
+		  const std::vector<std::vector<int>> & vGridObsPsIdx);
 
 	//3. Compute the occlusion
 	void OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
@@ -135,6 +144,9 @@ private:
 	//weighted of each term for total confidence value
 	const float m_fWeightDis;
 	const float m_fWeightVis;
+
+	//the searched radius of a query point in density estimation
+	const float m_fDensityR;
 
 };
 

@@ -22,6 +22,9 @@ struct CofidenceValue {
 	//distance based term
 	float disTermVal;
 
+	//quality
+	float quality;
+
 	//Weighted total of those two terms above
 	float totalValue;
 
@@ -54,10 +57,12 @@ struct CofidenceValue {
 		disTermVal = 0.0;
 		//boundary = 0.0;
 		totalValue = 0.0;
+		quality = 0.0;
 		travelable = -1;
 		iLabel = 0;
 		bMinFlag = false;
 		bKnownFlag = false;
+
 	};
 
 };
