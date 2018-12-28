@@ -288,7 +288,7 @@ int main() {
 
 	//find scanning region of each node (site)
 	//while(iLoopCount!=10 && bOverFlag){
-    while(bOverFlag){
+    while(iLoopCount != 1 && bOverFlag){
 		//judgement
 		bOverFlag = false;
 	    //robot location
@@ -356,16 +356,19 @@ int main() {
 			std::cout << "got it" << std::endl;
 		}
 
+		//visibility term
 		if(vVisibilityViews.size()){
 		oCofSolver.OcclusionTerm(oGridMaper.m_vReWardMap, vNearbyGrids, vVisibilityViews,
 			                     *pAllTravelCloud, vGVTravelPsIdx, *pAllBoundCloud,
 			                     vGVBoundPsIdx,*pAllObstacleCloud, vGVObsPsIdx);
         }
 
+		//quality term
 		oCofSolver.QualityTerm(oGridMaper.m_vReWardMap, vNearbyGrids,
 		                    	*pAllTravelCloud, vGVTravelPsIdx, *pAllBoundCloud,
 			                     vGVBoundPsIdx, *pAllObstacleCloud, vGVObsPsIdx);
 
+		//compute the total confidence
 		oCofSolver.ComputeTotalCoffidence(oGridMaper.m_vReWardMap, vNearbyGrids);
 
 		//using the minimum suppression
@@ -427,7 +430,14 @@ int main() {
 
 					pBackgroundCloud->points.push_back(pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]]);
 					vBGLabels.push_back(0);
-
+					oRecordedFile << pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].x << " "
+						<< pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].y << " "
+						<< pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].z << " "
+						<< oGridMaper.m_vReWardMap[i].disTermVal << " "
+						<< oGridMaper.m_vReWardMap[i].visibility << " "
+						<< oGridMaper.m_vReWardMap[i].quality << " "
+						<< oGridMaper.m_vReWardMap[i].totalValue << " "
+						<< std::endl;
 				}//end for j
 			}//end else
 
@@ -436,7 +446,14 @@ int main() {
 
 				pBackgroundCloud->points.push_back(pAllCloud->points[vAllBoundIdx[vGVBoundPsIdx[i][j]]]);
 				vBGLabels.push_back(0);
-
+				oRecordedFile << pAllCloud->points[vAllBoundIdx[vGVBoundPsIdx[i][j]]].x << " "
+					<< pAllCloud->points[vAllBoundIdx[vGVBoundPsIdx[i][j]]].y << " "
+					<< pAllCloud->points[vAllBoundIdx[vGVBoundPsIdx[i][j]]].z << " "
+					<< oGridMaper.m_vReWardMap[i].disTermVal << " "
+					<< oGridMaper.m_vReWardMap[i].visibility << " "
+					<< oGridMaper.m_vReWardMap[i].quality << " "
+					<< oGridMaper.m_vReWardMap[i].totalValue << " "
+					<< std::endl;
 			}
 
 			//save obstacle points
@@ -444,7 +461,14 @@ int main() {
 
 				pBackgroundCloud->points.push_back(pAllCloud->points[vAllObstacleIdx[vGVObsPsIdx[i][j]]]);
 				vBGLabels.push_back(0);
-
+				oRecordedFile << pAllCloud->points[vAllObstacleIdx[vGVObsPsIdx[i][j]]].x << " "
+					<< pAllCloud->points[vAllObstacleIdx[vGVObsPsIdx[i][j]]].y << " "
+					<< pAllCloud->points[vAllObstacleIdx[vGVObsPsIdx[i][j]]].z << " "
+					<< oGridMaper.m_vReWardMap[i].disTermVal << " "
+					<< oGridMaper.m_vReWardMap[i].visibility << " "
+					<< oGridMaper.m_vReWardMap[i].quality << " "
+					<< oGridMaper.m_vReWardMap[i].totalValue << " "
+					<< std::endl;
 			}
 
 		}//end if (oGridMaper.m_vReWardMap[i].bKnownFlag)

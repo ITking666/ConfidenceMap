@@ -56,8 +56,7 @@ public:
 	                        	const float & fThrVal);
 
 	//variance
-	inline float StandardDeviation(const PCLCloudXYZ & vCloud,
-		                           const std::vector<int> & vPointIdx);
+	inline float StandardDeviation(const PCLCloudXYZ & vCloud);
 
 	//density
 	inline float ComputeDensity(const PCLCloudXYZ & vCloud,

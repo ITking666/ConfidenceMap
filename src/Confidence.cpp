@@ -179,17 +179,16 @@ Output: the respond of linear function
 Return: float computed value
 Others: none
 *************************************************/
-inline float Confidence::StandardDeviation(const PCLCloudXYZ & vCloud,
-	                                       const std::vector<int> & vPointIdx){
+float Confidence::StandardDeviation(const PCLCloudXYZ & vCloud){
 
 	//define output
 	float fSDeviation = 0.0;
 
 	//compute the mean value of point set
-	pcl::PointXYZ oMeanPoint = ComputeCenter(vCloud,vPointIdx);
+	pcl::PointXYZ oMeanPoint = ComputeCenter(vCloud);
 	for (int i = 0; i != vCloud.points.size(); ++i) {
 	    //accumulation
-		fSDeviation += ComputeSquareNorm(oMeanPoint, vCloud.points[vPointIdx[i]]);
+		fSDeviation += ComputeSquareNorm(oMeanPoint, vCloud.points[i]);
 
 	}
 
@@ -649,11 +648,11 @@ void Confidence::QualityTerm(std::vector<CofidenceValue> & vReWardMap,
 	                                const PCLCloudXYZ & vObstacleCloud,
 	               const std::vector<std::vector<int>> & vGridObsPsIdx) {
 
-	//point clouds to be seen
-	PCLCloudXYZPtr pNearCloud(new PCLCloudXYZ);
-
 	//save the point that is in an unreachable grid
 	for (int i = 0; i != vNeighborGrids.size(); ++i) {
+
+		//point clouds to be seen
+		PCLCloudXYZPtr pNearCloud(new PCLCloudXYZ);
 
 		int iOneGridIdx = vNeighborGrids[i];
 
@@ -669,8 +668,11 @@ void Confidence::QualityTerm(std::vector<CofidenceValue> & vReWardMap,
 		for (int j = 0; j != vGridObsPsIdx[iOneGridIdx].size(); ++j)
 			pNearCloud->points.push_back(vObstacleCloud.points[vGridObsPsIdx[iOneGridIdx][j]]);
 		
-		//save the density of each grid
-		vReWardMap[iOneGridIdx].quality = ComputeDensity(*pNearCloud);
+		//estimate the quality of feature
+		//compute the quality using the density feature
+		//vReWardMap[iOneGridIdx].quality = ComputeDensity(*pNearCloud,5);
+		//compute the quality using the standard deviation feature
+		vReWardMap[iOneGridIdx].quality = StandardDeviation(*pNearCloud);
 
 	}//end for i
 
