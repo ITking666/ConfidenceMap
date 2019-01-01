@@ -9,6 +9,13 @@
 
 #include<pcl/point_cloud.h>
 
+///************************************************************************///
+// This code is to measure Hausdorff dimension on a given points
+//
+// created and edited by Huang Pengdi, 2018.12.27
+// Email: alualu628628@gmail.com
+///************************************************************************///
+
 
 //a structe records the non-emptys voxels number and its corresponding measured scale
 //scale is in meter
@@ -19,30 +26,22 @@ struct HitsInScale{
 	//thenon-empty boxes/voxels number 
 	float boxNum;
 };
-///************************************************************************///
-// a class to implement the GHPR algorithm
-// GHPR - Generalized Hidden Point Removal operator
-// Katz S., Tal A., On the visibility of point clouds, ICCV, 2015,1350-1358.
-// created and edited by Huang Pengdi, 2018.11.03
-
-//Version 1.0 2018.11.03
-// - add the implementation of the HPR algorithm
-//Version 1.1 2018.12.18
-// - add the implementation of the GHPR algorithm
 
 ///************************************************************************///
-/*========================================
-方法类HausdorffDimension
-该类为计算分形特征的类
-采用的是3D计盒维数估计
-方法主要是在局部点云建立反向octree
-对格子数和尺度进行一阶线性拟合求出梯度
-根据公式，梯度即为分形维数估计
-可以实现豪斯多夫维数和相关维数的计算
-edited by Huang Pengdi 2014.07.26
-修改于11月中旬,12月
-one example show how to use this class at the end of present page
-=======================================*/
+// a class to implement the box counting method, which is to compute the Hausdorff dimension
+// the measuring result of a point clouds is between 0 and 3 in a 3D space.
+// The implementation is mainly based on a reverse searching, which is like reverse octree
+// This code can also calculate the Hausdorff dimension and related dimensions
+
+//Version 1.0 2018.12.27
+// - created
+//Version 1.0 2018.12.30
+// - modified functions and remove something others
+//Version 1.1 2019.1.1
+// - add the notes
+
+///************************************************************************///
+
 class HausdorffDimension{
 
 public:
@@ -54,38 +53,38 @@ public:
 
 	//destructor
 	~HausdorffDimension();
-	//初始化函数，大多参数的默认值在此函数内设置（distinguishing based on repeatly setting during iteration or not）
-	//**************************参数初始化相关函数***************************
-	//****just set once一劳永逸（设置一次就行）
-	void SetParaQ(int f_iParaQ);//设置广义维数的参数大小，一般选0-豪斯多夫维数或选2-相关维数
+	
+	//*************Parameter setting function*************
+	//set the generalized dimensional parameter q, where q = 0 is a normal Hausdorff dimension 
+	void SetParaQ(int f_iParaQ);//where q = 2 is a related dimension
 
-
+	//initial the iteration times (upper and lower limits)
 	void InitialLoopParams(const int & f_iIterMax,
-	                       const int & f_iIterMin);//获取迭代的上限和下限
+	                       const int & f_iIterMin);
 
-    //手动设置迭代的尺度大小,一般用于求取需求尺度下的值（如20到100m）
+    //set the measuring scale manually, e.g., from 20 to 100m
 	void SetGivenScales(const float & f_fLargeScale,
 	                    const float & f_fSmallScale);
-    //two steps from hell
-	//****need repeatly setting老黄牛般勤劳（在循环内需多次设置，主要是为了可以在循环内可以有不同值）
-	//清除一切
-	void ClearLength();
-	//清除不需要的东西，例如循环过程中类内保存的点云，需要清理
-	void ClearAll();
-    //设置寻找向量无关模式
 
 	//set the minimum distance
 	void SetMinDis(float f_fMinDis);
 
-    //设置已经计算好的点云包围盒最大最小值
+    //Set a priori value of bounding box corner
 	void SetMaxMinCoor(const pcl::PointXYZ & f_oMaxCoor, 
 		               const pcl::PointXYZ & f_oMinCoor);
 
 	//extract the edge length 
 	bool ExtractEdgeLength(pcl::PointXYZ & oOutLength);
 
-//*******************************performance function***************************
-	//round
+	//clear the member variables which are related to the input data
+	void ClearLength();
+	
+	//clear and reset all of member variables
+	void ClearAll();
+
+	//*************performance function*************
+
+	//round a given value
 	float Round(const float & fIdx){
 		
 		return(fIdx > 0.0) ? floor(fIdx + 0.5) : ceil(fIdx - 0.5);
@@ -98,6 +97,7 @@ public:
 	//compute the length of the bounding box
 	std::vector<float> GetBoundingLength(const pcl::PointCloud<pcl::PointXYZ> & vCloud);
 
+	//find the maximum value among the input vector
 	template <typename T>
 	inline T FindMaximum(std::vector<T> vSequence){
 		
@@ -125,42 +125,32 @@ public:
 
 private:
 	
-	//迭代次数的头尾两值，决定分形所需要的拟合数据集大小
-	int m_iIterMax;
-	int m_iIterMin;
+	//The first and last iteration times 
+	int m_iIterMax;//
+	int m_iIterMin;//
 
-	//盒子维数的方形盒子大小
-	float m_fBoundBoxLen;
-	
-	//盒子边长补全（为了防止边界因内存及字符型原因计算错误，加个极小值）
-	const float m_fRedundancy;
-
-	//bool readpointflag;
-	//flag
-	
+	//a flag denotes whether the corners is known before processing 
 	bool m_bMaxMinCoFlag;
 	
+	//this flag indicates the bounding box construction has been done or not 
+	bool m_bEdgeFlag;
 
-	//this flag is to indicate the box counting operation has been done or not 
-	bool m_bEdgeFlag;//measure the dimension
+	//length of bounding box 
+	pcl::PointXYZ m_oMinCoor;//corner
+	pcl::PointXYZ m_oMaxCoor;//corner
+	pcl::PointXYZ m_oEdgeLength;//length at x, y, z axis, respectively
+	float m_fBoundBoxLen;//the maximum length of bounding box						
+	const float m_fRedundancy;//it adds a minimum value for m_fBoundBoxLen to prevent bug
 
-
-
-
-	//计算的包围盒各个方向边长
-	pcl::PointXYZ m_oMinCoor;
-	pcl::PointXYZ m_oMaxCoor;//
-	pcl::PointXYZ m_oEdgeLength;//包围盒x,y,z长度
-	
-	//广义维数q
+	//generalized dimension Q
 	float m_fParaQ;
 
-	//设置尺度大小
+	////the minimum and the maximum measuring scale
 	float m_fLargeScale;
 	float m_fSmallScale;
 	bool m_bScaleFlag;
 
-	//最小距离
+	//the minimum measuring scale
 	float m_fMinDis;
 	bool m_bMinDisFlag;
 
@@ -168,19 +158,16 @@ private:
 
 #endif
 
-/*=================================================Example
-//one example: you can copy it and run immediately but insure you have pcd or las file
-//read point clouds
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
-	std::vector<Point3D> point3d;
-	HPDpointclouddataread("SurfaceXYZPCD.pcd",cloud,point3d,2);
-//new object for computing
-	HausdorffDimension pcfa;
-	pcfa.Settype(3);
-	//pcfa.Setradius(0.2);
-	//pcfa.Setresolution(10,10,10);
-//caculate
-	pcfa.ComputeDimension(cloud,point3d,"asas.txt");
-//show and pause
-	std::cin.get();
+/******************* one example show how to use it *******************
+//please insure you have a point cloud input with pcd type (PCL lib is required)
+//one example: you can copy it and run it directly
+
+HausdorffDimension oHDor(5,1);
+
+oHDor.SetMinDis(0.1);
+
+oHDor.SetParaQ(0);
+
+std::cout<<"HD: "<<oHDor.BoxCounting(*cloud)<<std::endl;
+
 ==============================================*/

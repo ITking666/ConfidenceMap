@@ -104,14 +104,20 @@ void HausdorffDimension::SetMaxMinCoor(const pcl::PointXYZ & f_oMaxCoor,
 	}
 
 }
-/*========================
-函数SetGivenScale()简介
-功能：设置半径用于按点邻域来判断分形结果
-searchtype=1 为3D方形
-searchtype=2 为3D圆形
-searchtype=3 计算整个点云的分形维数（一般测试用）
-形参：输入的半径大小单位米
-========================*/
+
+/*************************************************
+Function: SetGivenScales
+Description: give minimum and maximum scale that is expected adopting in calculation
+Calls: none
+Called By: class object
+Table Accessed: none
+Table Updated: none
+Input: f_fLargeScale - the largest measuring scale 
+	   f_fSmallScale - the smallest measuring scale
+Output: m_fLargeScale, m_fSmallScale 
+Return: none
+Others: none
+*************************************************/
 void HausdorffDimension::SetGivenScales(const float & f_fLargeScale,
 	                                    const float & f_fSmallScale){
 
@@ -123,12 +129,19 @@ void HausdorffDimension::SetGivenScales(const float & f_fLargeScale,
 	m_bScaleFlag = true;
 }
 
-/*========================
-函数Setq()
-功能：设置计算的维数类型
-一般就选0和2，注意不能选1
-注意：1是信息维数，但是该程序没有编，分母为零会出错
-========================*/
+/*************************************************
+Function: SetParaQ
+Description: set the generalized dimensional parameter q, which is proposed by H. G. E. Hentschel
+Calls: none
+Called By: class object
+Table Accessed: none
+Table Updated: none
+Input: f_iParaQ - q parameter
+Output: m_fParaQ - a float type q
+Return: none
+Others: Dq = lim(Sq/ln(scale)), where Sq = (1/(1-q))*ln(sum(pi^q))
+        Sq is also called Renyi information dimension
+*************************************************/
 void HausdorffDimension::SetParaQ(int f_iParaQ){
 
 	//get the Q parameter
@@ -136,26 +149,25 @@ void HausdorffDimension::SetParaQ(int f_iParaQ){
 	
 	// q=1 would cause dividing zero
 	if (m_fParaQ == 1){
-		std::cout<<"Error:信息维数q=1在该程序中没有准备，建议选0或2！"<<std::endl;
+		std::cout<<"Error: q = 1 is not prepared in this programme，choose 0 or 2 please ！"<<std::endl;
 	    std::cin.get();
 		exit(0);
 	}
 
 }
 
-
 /*************************************************
-Function: LinearKernel
-Description: the linear Kernel function of GHPR algorithm
+Function: ExtractEdgeLength
+Description: extract the length of bounding box 
 Calls: none
-Called By: ComputeVisibility
+Called By: class object
 Table Accessed: none
 Table Updated: none
-Input: fGamma - the gamma parameter of kernel function
-       fPointNorm - the point norm (distance)
-Output: the distance value indicates the transformation 
-Return: a distance value
-Others: gamma is larger than the maximum distance from viewpoint to point set
+Input: oOutLength
+Output: oOutLength - the ouput length at each axis
+Return: true - There is indeed a calculated length 
+        false - the length of bounding box has not been computed yet
+Others: none
 *************************************************/
 bool HausdorffDimension::ExtractEdgeLength(pcl::PointXYZ & oOutLength){
 
@@ -182,17 +194,20 @@ bool HausdorffDimension::ExtractEdgeLength(pcl::PointXYZ & oOutLength){
 
 
 /*************************************************
-Function: LinearKernel
-Description: the linear Kernel function of GHPR algorithm
+Function: InitialLoopParams
+Description: limit the calculated depth of counting box number
 Calls: none
-Called By: ComputeVisibility
+Called By: class object or HausdorffDimension
 Table Accessed: none
 Table Updated: none
-Input: fGamma - the gamma parameter of kernel function
-       fPointNorm - the point norm (distance)
-Output: the distance value indicates the transformation 
-Return: a distance value
-Others: gamma is larger than the maximum distance from viewpoint to point set
+Input: f_iIterMax - stop at f_iIterMax times iteration to count box number
+	   f_iIterMin - begin at f_iIterMin times iteration to count box number
+Output: m_iIterMax
+	    m_iIterMin
+Return: none
+Others: f_iIterMax and f_iIterMin is to determine the measuring scale this method would use
+        the measuring scale would be about f_iIterMax-th and f_iIterMin-th power of the side length
+        this funtion is to defend the overcomputation of box counting
 *************************************************/
 void HausdorffDimension::InitialLoopParams(const int & f_iIterMax,
 	                                       const int & f_iIterMin){
@@ -200,22 +215,35 @@ void HausdorffDimension::InitialLoopParams(const int & f_iIterMax,
 	m_iIterMax = f_iIterMax;
 	m_iIterMin = f_iIterMin;
 
+	//the input should be positive integer numbers
 	if(m_iIterMax < 0 || m_iIterMin < 0 || m_iIterMax - m_iIterMin < 0){
-		std::cout<<"Error:维数的尺度不能小于0，否则即尺寸无穷大，程序在该尺度下计算无意义。"<<std::endl;
-		std::cout<<"请按回车确定结束程序重新选择尺度初始化。"<<std::endl;
+		std::cout<<" Error: It does not make scene if the scale is equal to 0 or smaller than 0. "<<std::endl;
+		std::cout<<" Please choose any measuring scale and try again."<<std::endl;
 		std::cin.get();
 		exit(0);
 	}
 
 }
-/*========================
-函数BoxCounting()简介
-功能：求输入三维点云的计盒分形维数
-cloud 是点云数据
-cellmax 方格子的最大边长,可以取2的偶数次幂次(1,2,4,8...),取大于数据长度的偶数
-dim 是cloud的计盒维数,D=lim(log(N(e))/log(k/e))
-返回计盒分形维数结果值
-========================*/
+
+/*************************************************
+Function: BoxCounting
+Description: the box-counting method is used to approximate the Hausdorff dimension since Hausdorff dimension is not easy to be obtained in mormal 
+             the box counting method counts the box numbers (non-empty voxel numbers) in different scale,
+			 and then fits a straight line (trend), the slope of this fitted line is measured dimension.
+Calls: GetBoundingLength - need to compute the length of bounding box
+       FindMaximum - need find the maximum length to construct the bounding box
+	   LinearFitting - need fit the target line (find the trend in spectrum)
+	   Round - rounding a value 
+Called By: class object 
+Table Accessed: none
+Table Updated: none
+Input: vCloud - a input point clouds that need to be measured
+Output: fDimensionRes - an approximate Hausdorff dimension result
+Return: fDimensionRes
+Others: the result of Hausdorff dimension depends on the given measuring scale (Observation scale)
+        Hausdorff dimension only guarantees uniqueness in infinitesimal values (Scale-independent)
+		Therefore, the essence of this method is the interception of dimensions in given scale range.
+*************************************************/
 float HausdorffDimension::BoxCounting(const pcl::PointCloud<pcl::PointXYZ> & vCloud){
 
 	//define output as zero (the truth Hausdorff dimension of any point set)
@@ -230,15 +258,15 @@ float HausdorffDimension::BoxCounting(const pcl::PointCloud<pcl::PointXYZ> & vCl
 	//get the largest size of bounding box
 	m_fBoundBoxLen = FindMaximum(vBoundLengths);
 
-	//尺度模式则将尺度进行计算
-	//+m_fBoundBoxLen/200因为边缘精度不够容易内存跳错，即多出一个
+	//defend debug caused by precision problem
 	m_fBoundBoxLen = m_fBoundBoxLen * (1.0f + m_fRedundancy);
 
+	//if specified scale is required
 	if(m_bScaleFlag){
 		
 		m_iIterMin = Round(log10(m_fLargeScale/m_fBoundBoxLen)/log10(0.5));
 		
-		//防止盒子边长小于给定的收敛边长而无法计算收敛，小于的话维数肯定是0的
+		//Prevent the side length of the box from being smaller than the given length
 	    if(m_fBoundBoxLen == 0 || m_fBoundBoxLen < m_fSmallScale)
 			m_fBoundBoxLen = m_fSmallScale;
 		
@@ -249,8 +277,9 @@ float HausdorffDimension::BoxCounting(const pcl::PointCloud<pcl::PointXYZ> & vCl
 	//whether using computed minimum scale
 	if(m_bMinDisFlag){
 		
-		if(m_fBoundBoxLen == 0 || m_fBoundBoxLen < m_fMinDis)//防止零无法整除
-			m_fBoundBoxLen = m_fMinDis;//可以小于，但如果小好几个数量级，那要算非常久，但都是零无意义
+        //prevent dividing zero
+		if(m_fBoundBoxLen == 0 || m_fBoundBoxLen < m_fMinDis)
+			m_fBoundBoxLen = m_fMinDis;
 		//Base change formula is to compute the loop
 		m_iIterMax = floor(log10(m_fMinDis/m_fBoundBoxLen)/log10(0.5));
 		
@@ -265,24 +294,25 @@ float HausdorffDimension::BoxCounting(const pcl::PointCloud<pcl::PointXYZ> & vCl
 	//*****************major part******************
 	float boxsize = m_fBoundBoxLen / pow(2.0f,float(m_iIterMax));
 	float boxnumber = 0;
-	//盒子总数目,因为盒子数等于尺寸分辨率
+	
+	//The total number of boxes, in fact, the number of boxes is equal to the resolution
     int xnumber = (int)(pow(2.0f,float(m_iIterMax)));
-	//建立三维数组来存储这些盒子的值
-	std::vector<std::vector<std::vector<int>>> downbox;//基盒子
-	std::vector<std::vector<std::vector<int>>> upbox;//Octree用的盒子
+	//save boxes
+	std::vector<std::vector<std::vector<int>>> downbox;//root box
+	std::vector<std::vector<std::vector<int>>> upbox;//
 
 	for(int i = 0; i != xnumber; ++i){
 
 		std::vector<std::vector<int>> boxy;
 		for(int j = 0; j != xnumber; ++j){
-			
-			std::vector<int> boxz(xnumber,0);//全部初始化为0
+			//initial as zero
+			std::vector<int> boxz(xnumber,0);
 			boxy.push_back(boxz);
 		}
 		downbox.push_back(boxy);
 	} 
 
-	//包含点的盒子数目
+	//the number of non-empty boxes
 	int xvalue,yvalue,zvalue;
 	for(int i = 0; i != vCloud.size(); ++i){
 
@@ -293,7 +323,7 @@ float HausdorffDimension::BoxCounting(const pcl::PointCloud<pcl::PointXYZ> & vCl
 
 	}
 
-	//用广义维数占用率计数
+	//using generalized dimension pi^q
 	for(int i = 0; i != xnumber; ++i){
 		for(int j = 0; j != xnumber; ++j){
 			for(int k = 0; k != xnumber; ++k){
@@ -304,25 +334,25 @@ float HausdorffDimension::BoxCounting(const pcl::PointCloud<pcl::PointXYZ> & vCl
 		}
 	}
 
-	//存储第一对结果，其他结果用循环做
+	//store the first pair of results, followers are stored in a loop
 	HitsInScale oFirstScaleRes;
 	oFirstScaleRes.boxNum = log(float(boxnumber));
 	oFirstScaleRes.boxScale = log(boxsize);
 	vSpectrum.push_back(oFirstScaleRes);
 
 	std::cout << "n:" << m_iIterMax << "sca: " << boxsize << ",num: " << boxnumber << std::endl;
-	//
+	
+	//current iterion time
 	int iters = m_iIterMax - 1;
-	//循环获得不同尺寸的计盒结果,n是最小尺度，盒子是越来越小的
 
-	//
+	//counting boxes at different scale using a loop 
+	//the smaller the scale be used, the smaller the box becames
 	while(iters - m_iIterMin + 1){
 		
-		//
 		boxnumber = 0;
 		boxsize = boxsize * 2.0;
-		//用octree来遍历，减少计算
-		//给新的upbox设置大小并赋值0；
+		// use a structure similiar to octree so that calculations can be reduced
+		// set the size of the new upbox
 		upbox.clear();
 		int ocnumber = (int)(pow(2.0f,float(iters)));
 		
@@ -330,20 +360,21 @@ float HausdorffDimension::BoxCounting(const pcl::PointCloud<pcl::PointXYZ> & vCl
 		if(ocnumber < 1)
 			ocnumber = 1;
 		
-		//
+		//Traversing 
 		for(int i = 0;i != ocnumber; ++i){
 			
 			std::vector<std::vector<int>> boxy;
-			
+			//initial as zero
 			for(int j = 0;j != ocnumber; ++j){
-				std::vector<int> boxz(ocnumber,0);//全部初始化为0
+				std::vector<int> boxz(ocnumber,0);
 				boxy.push_back(boxz);
 			}
 			
 			upbox.push_back(boxy);
 		} 
 		
-		//遍历方式，比较下级的点位置并分配到octree上级
+		//Traversing 
+		//compare the position of the lower level and assign result to the superior level
 		for(int i = 0;i != downbox.size(); ++i){
 			
 			for(int j = 0;j != downbox.size(); ++j){
@@ -351,15 +382,14 @@ float HausdorffDimension::BoxCounting(const pcl::PointCloud<pcl::PointXYZ> & vCl
 				for(int k = 0; k != downbox.size(); ++k){
 
 					if(downbox[i][j][k])
-						//底下的盒子合并，有点的往上累加
+						//merge low level boxes and accumulate non-empty quantity
 						upbox[floor(float(i)/2)][floor(float(j)/2)][floor(float(k)/2)]
 					     = upbox[floor(float(i)/2)][floor(float(j)/2)][floor(float(k)/2)] + downbox[i][j][k];
 				}//end k
 			}//end j
 		}//end i
 		
-		//计算盒子数
-		
+		//counting
 		for(int i = 0;i != upbox.size(); ++i){
 			
 			for(int j = 0;j != upbox.size(); ++j){
@@ -381,7 +411,7 @@ float HausdorffDimension::BoxCounting(const pcl::PointCloud<pcl::PointXYZ> & vCl
 	
 		vSpectrum.push_back(oScaleRes);
 		
-		//将下级box变成当前Box
+		//Turn the subordinate boxes into the current boxes
 		downbox.clear();
 		downbox=upbox;
 
@@ -397,13 +427,19 @@ float HausdorffDimension::BoxCounting(const pcl::PointCloud<pcl::PointXYZ> & vCl
 	return fDimensionRes;
 
 }
-/*========================
-LinearFitting函数简介
-功能：最小二乘法线性回归
-形参：一个装有点云盒子数和点云尺度的矩阵
-输出：样本点的一次方程斜率即维数（注意是对数形式）
-return double型拟合结果
-========================*/
+
+/*************************************************
+Function: LinearFitting
+Description: Linear fitting of two-dimensional lines
+Calls: nothing
+Called By: BoxCounting
+Table Accessed: none
+Table Updated: none
+Input: vSpectrum - a sample vector, where boxNum is y and boxScale is x, respectively
+Output: fKPara - the slope of fitting line
+Return: fKPara
+Others: none
+*************************************************/
 float HausdorffDimension::LinearFitting(std::vector<HitsInScale> & vSpectrum){
 	
 	//set y = kx + b as the target line to be fitted
@@ -443,12 +479,19 @@ float HausdorffDimension::LinearFitting(std::vector<HitsInScale> & vSpectrum){
 
 };
 
-/*========================
-GetBoundingLength函数简介
-功能：计算包围盒的边长
-形参：输入的点云
-输出：保存到该类的m_oEdgeLength
-========================*/
+/*************************************************
+Function: GetBoundingLength
+Description: Output the length of bounding box
+Calls: nothing
+Called By: BoxCounting
+Table Accessed: none
+Table Updated: none
+Input: vCloud - a input point clouds
+Output: m_oEdgeLength - the maximum length of bounding box at each axis
+        vBoundLengths - the same with m_oEdgeLength
+Return: vBoundLengths
+Others: none
+*************************************************/
 std::vector<float> HausdorffDimension::GetBoundingLength(const pcl::PointCloud<pcl::PointXYZ> & vCloud){
 
 	//check whether the maximum and minimum coordinate value of points is known  
@@ -507,10 +550,18 @@ std::vector<float> HausdorffDimension::GetBoundingLength(const pcl::PointCloud<p
 }
 
 
-/*========================
-Clearscale函数简介
-功能：清除已有scale，方便循环中变动赋值
-========================*/
+/*************************************************
+Function: ClearLength
+Description: clear the length related parameters
+Calls: nothing
+Called By: class object
+Table Accessed: none
+Table Updated: none
+Input: none
+Output: none
+Return: none
+Others: reset the parameters or variables which related to the input point clouds
+*************************************************/
 void HausdorffDimension::ClearLength(){
 	
 	//the parameters here is related to the input data
@@ -537,6 +588,18 @@ void HausdorffDimension::ClearLength(){
 
 }
 
+/*************************************************
+Function: :ClearAll
+Description: clear all of parameters
+Calls: nothing
+Called By: class object
+Table Accessed: none
+Table Updated: none
+Input: none
+Output: none
+Return: none
+Others: reset the all of parameters and variables 
+*************************************************/
 void HausdorffDimension::ClearAll(){
 
 	//clear coordinate corner value
