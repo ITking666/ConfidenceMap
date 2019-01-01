@@ -1,5 +1,6 @@
 #ifndef CONFIDENCE_H 
 #define CONFIDENCE_H 
+#include "HausdorffMeasure.h"
 #include "GridMap.h"
 #include "GHPR.h"
 #include <stdlib.h>
