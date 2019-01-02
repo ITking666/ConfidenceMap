@@ -50,6 +50,8 @@ struct CofidenceValue {
 	//4 indicates this grid is a off groud grid (not reachable forever)
 	short travelable;
 
+	bool Hausdorffflag;
+
 	//constructor
 	CofidenceValue() {
 
@@ -62,7 +64,7 @@ struct CofidenceValue {
 		iLabel = 0;
 		bMinFlag = false;
 		bKnownFlag = false;
-
+		Hausdorffflag = true;
 	};
 
 };

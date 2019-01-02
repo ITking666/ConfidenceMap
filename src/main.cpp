@@ -364,8 +364,25 @@ int main() {
         }
 
 		//quality term
-		oCofSolver.QualityTerm(oGridMaper.m_vReWardMap, vNearbyGrids, *pAllBoundCloud,
-			                     vGVBoundPsIdx, *pAllObstacleCloud, vGVObsPsIdx);
+		for(int i = 0; i != vNearbyGrids.size(); ++i){
+			
+			if(oGridMaper.m_vReWardMap[vNearbyGrids[i]].iLabel == 1 ||
+				oGridMaper.m_vReWardMap[vNearbyGrids[i]].iLabel == 3){
+
+					if(oGridMaper.m_vReWardMap[vNearbyGrids[i]].Hausdorffflag){
+				       std::vector<int> vNearbyQualityGrids = oGridMaper.SearchGrids(vNearbyGrids[i], 3.0);
+			           oCofSolver.QualityTerm(oGridMaper.m_vReWardMap, vNearbyQualityGrids, *pAllBoundCloud,
+					                           vGVBoundPsIdx, *pAllObstacleCloud, vGVObsPsIdx);
+
+					   for(int i=0;i!=vNearbyQualityGrids.size();++i)
+						   oGridMaper.m_vReWardMap[vNearbyQualityGrids[i]].Hausdorffflag = false;
+
+					}//end if oGridMaper.m_vReWardMap[vNearbyGrids[i]].Hausdorffflag
+			}//end if
+		}
+		for(int i = 0; i != vNearbyGrids.size(); ++i)
+			oGridMaper.m_vReWardMap[vNearbyGrids[i]].Hausdorffflag = true;
+
 
 		//compute the total confidence
 		oCofSolver.ComputeTotalCoffidence(oGridMaper.m_vReWardMap, vNearbyGrids);
