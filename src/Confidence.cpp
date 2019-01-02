@@ -623,6 +623,62 @@ void Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWardMap,
 }
 
 /*************************************************
+Function: QualityTermUsingDensity
+Description: the function is to compute the distance feature to the confidence value
+Calls: ComputeCenter
+GaussianKernel
+Called By: main function of project
+Table Accessed: none
+Table Updated: none
+Input: vReWardMap - the confidence map (grid map)
+oRobotPoint - the location of the robot
+vNeighborGrids - the neighboring grids based on the input robot location
+vTravelCloud - the travelable point clouds (the ground point clouds)
+vGridTravelPsIdx - the index of point within each grid to total travelable point clouds
+Output: the distance term value of each neighboring grid
+Return: a vector saves distance value of each neighboring grid
+Others: none
+*************************************************/
+//void Confidence::QualityTermUsingDensity(std::vector<CofidenceValue> & vReWardMap,
+//                               const std::vector<int> & vNeighborGrids,
+//	                                  const PCLCloudXYZ & vTravelCloud,
+//	            const std::vector<std::vector<int>> & vGridTravelPsIdx,
+//	                                const PCLCloudXYZ & vAllBoundCloud,
+//	             const std::vector<std::vector<int>> & vGridBoundPsIdx,
+//	                                const PCLCloudXYZ & vObstacleCloud,
+//	               const std::vector<std::vector<int>> & vGridObsPsIdx) {
+//
+//	//save the point that is in an unreachable grid
+//	for (int i = 0; i != vNeighborGrids.size(); ++i) {
+//
+//		//point clouds to be seen
+//		PCLCloudXYZPtr pNearCloud(new PCLCloudXYZ);
+//
+//		int iOneGridIdx = vNeighborGrids[i];
+//
+//		//record the ground point
+//		for (int j = 0; j != vGridTravelPsIdx[iOneGridIdx].size(); ++j)
+//			pNearCloud->points.push_back(vTravelCloud.points[vGridTravelPsIdx[iOneGridIdx][j]]);
+//
+//		//record the boundary point
+//		for (int j = 0; j != vGridBoundPsIdx[iOneGridIdx].size(); ++j)
+//			pNearCloud->points.push_back(vAllBoundCloud.points[vGridBoundPsIdx[iOneGridIdx][j]]);
+//
+//		//record the obstacle point
+//		for (int j = 0; j != vGridObsPsIdx[iOneGridIdx].size(); ++j)
+//			pNearCloud->points.push_back(vObstacleCloud.points[vGridObsPsIdx[iOneGridIdx][j]]);
+//		
+//		//estimate the quality of feature
+//		//compute the quality using the density feature
+//		//vReWardMap[iOneGridIdx].quality = ComputeDensity(*pNearCloud,5);
+//		//compute the quality using the standard deviation feature
+//		vReWardMap[iOneGridIdx].quality = StandardDeviation(*pNearCloud);
+//
+//	}//end for i
+//
+//}
+
+/*************************************************
 Function: QualityTerm
 Description: the function is to compute the distance feature to the confidence value
 Calls: ComputeCenter
@@ -640,41 +696,67 @@ Return: a vector saves distance value of each neighboring grid
 Others: none
 *************************************************/
 void Confidence::QualityTerm(std::vector<CofidenceValue> & vReWardMap,
-                               const std::vector<int> & vNeighborGrids,
-	                                  const PCLCloudXYZ & vTravelCloud,
-	            const std::vector<std::vector<int>> & vGridTravelPsIdx,
-	                                const PCLCloudXYZ & vAllBoundCloud,
-	             const std::vector<std::vector<int>> & vGridBoundPsIdx,
-	                                const PCLCloudXYZ & vObstacleCloud,
-	               const std::vector<std::vector<int>> & vGridObsPsIdx) {
+	                          const std::vector<int> & vNeighborGrids,
+	                               const PCLCloudXYZ & vAllBoundCloud,
+	            const std::vector<std::vector<int>> & vGridBoundPsIdx,
+	                               const PCLCloudXYZ & vObstacleCloud,
+	              const std::vector<std::vector<int>> & vGridObsPsIdx){
+
+	//point clouds to be seen
+	PCLCloudXYZPtr pNearCloud(new PCLCloudXYZ);
+	std::vector<int> vMeasuredGridIdx;
 
 	//save the point that is in an unreachable grid
 	for (int i = 0; i != vNeighborGrids.size(); ++i) {
 
-		//point clouds to be seen
-		PCLCloudXYZPtr pNearCloud(new PCLCloudXYZ);
-
 		int iOneGridIdx = vNeighborGrids[i];
 
-		//record the ground point
-		for (int j = 0; j != vGridTravelPsIdx[iOneGridIdx].size(); ++j)
-			pNearCloud->points.push_back(vTravelCloud.points[vGridTravelPsIdx[iOneGridIdx][j]]);
+		//if this grid is a obstacle grid or boundary grid
+		if(vReWardMap[iOneGridIdx].iLabel == 1
+		   || vReWardMap[iOneGridIdx].iLabel == 3){
+			
+			//record this grid idx
+			vMeasuredGridIdx.push_back(iOneGridIdx);
 
-		//record the boundary point
-		for (int j = 0; j != vGridBoundPsIdx[iOneGridIdx].size(); ++j)
-			pNearCloud->points.push_back(vAllBoundCloud.points[vGridBoundPsIdx[iOneGridIdx][j]]);
-
-		//record the obstacle point
-		for (int j = 0; j != vGridObsPsIdx[iOneGridIdx].size(); ++j)
-			pNearCloud->points.push_back(vObstacleCloud.points[vGridObsPsIdx[iOneGridIdx][j]]);
-		
-		//estimate the quality of feature
-		//compute the quality using the density feature
-		//vReWardMap[iOneGridIdx].quality = ComputeDensity(*pNearCloud,5);
-		//compute the quality using the standard deviation feature
-		vReWardMap[iOneGridIdx].quality = StandardDeviation(*pNearCloud);
+			//record the boundary point
+			//for (int j = 0; j != vGridBoundPsIdx[iOneGridIdx].size(); ++j)
+			//	pNearCloud->points.push_back(vAllBoundCloud.points[vGridBoundPsIdx[iOneGridIdx][j]]);
+			
+			//record the obstacle point
+			for (int j = 0; j != vGridObsPsIdx[iOneGridIdx].size(); ++j)
+				pNearCloud->points.push_back(vObstacleCloud.points[vGridObsPsIdx[iOneGridIdx][j]]);
+			
+			//estimate the quality using Hausdorff measure based method
+	
+		}//end if
 
 	}//end for i
+
+	//using Hausdorff Dimension to measure point clouds
+	HausdorffDimension oHDor(5, 1);
+	//set the 
+	oHDor.SetMinDis(0.1);
+	//set the dimension type
+	oHDor.SetParaQ(0);
+	//compute the Hausdorff result
+	float fHausRes = oHDor.BoxCounting(*pNearCloud);
+
+	//assigment
+	for (int i = 0; i != vMeasuredGridIdx.size(); ++i) {
+	
+		vReWardMap[vMeasuredGridIdx[i]].quality = fHausRes;
+
+	}
+
+	std::ofstream oRawFile;
+	oRawFile.open("testfractal.txt", std::ios::out | std::ios::app);
+	for(int i = 0 ;i != pNearCloud->points.size(); ++i){
+		oRawFile << pNearCloud->points[i].x << " "
+		         << pNearCloud->points[i].y << " "
+		         << pNearCloud->points[i].z << " "
+		         << std::endl;
+    }//end for j
+	oRawFile.close();
 
 }
 

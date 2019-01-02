@@ -364,8 +364,7 @@ int main() {
         }
 
 		//quality term
-		oCofSolver.QualityTerm(oGridMaper.m_vReWardMap, vNearbyGrids,
-		                    	*pAllTravelCloud, vGVTravelPsIdx, *pAllBoundCloud,
+		oCofSolver.QualityTerm(oGridMaper.m_vReWardMap, vNearbyGrids, *pAllBoundCloud,
 			                     vGVBoundPsIdx, *pAllObstacleCloud, vGVObsPsIdx);
 
 		//compute the total confidence

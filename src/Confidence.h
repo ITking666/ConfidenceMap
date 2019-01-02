@@ -95,14 +95,22 @@ public:
 		const std::vector<std::vector<int>> & vGridTravelPsIdx);
 
 	//2. quality term of confidence map
+	//void QualityTermUsingDensity(std::vector<CofidenceValue> & vReWardMap,
+	//	                          const std::vector<int> & vNeighborGrids,
+	//	                                 const PCLCloudXYZ & vTravelCloud,
+	//               const std::vector<std::vector<int>> & vGridTravelPsIdx,
+	//	                               const PCLCloudXYZ & vAllBoundCloud,
+	//	            const std::vector<std::vector<int>> & vGridBoundPsIdx,
+	//	                               const PCLCloudXYZ & vObstacleCloud,
+	//	              const std::vector<std::vector<int>> & vGridObsPsIdx);
+
+	//2. quality term of confidence map
 	void QualityTerm(std::vector<CofidenceValue> & vReWardMap,
-		              const std::vector<int> & vNeighborGrids,
-		                     const PCLCloudXYZ & vTravelCloud,
-	   const std::vector<std::vector<int>> & vGridTravelPsIdx,
-		                   const PCLCloudXYZ & vAllBoundCloud,
-		const std::vector<std::vector<int>> & vGridBoundPsIdx,
-		                   const PCLCloudXYZ & vObstacleCloud,
-		  const std::vector<std::vector<int>> & vGridObsPsIdx);
+		                 const std::vector<int> & vNeighborGrids,
+		                      const PCLCloudXYZ & vAllBoundCloud,
+		   const std::vector<std::vector<int>> & vGridBoundPsIdx,
+		                      const PCLCloudXYZ & vObstacleCloud,
+		     const std::vector<std::vector<int>> & vGridObsPsIdx);
 
 	//3. Compute the occlusion
 	void OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
