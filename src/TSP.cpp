@@ -151,7 +151,7 @@ void TSP::GetNewNodes(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 
 		    //get the grid idx of new node
 		    m_vUnVisitNodeIdx.push_back(vNewNodeIdxs[i]);
-		    //ger the center position of new node
+		    //get the center position of new node
 		    m_vUnVisitCenters.push_back(oCenterPoint);
 	
 	    }//end for int i = 0; i != vNewNodeIdxs.size()

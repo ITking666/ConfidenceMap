@@ -739,6 +739,7 @@ void Confidence::QualityTerm(std::vector<CofidenceValue> & vReWardMap,
 	//set the dimension type
 	oHDor.SetParaQ(0);
 	//compute the Hausdorff result
+
 	float fHausRes = oHDor.BoxCounting(*pNearCloud);
 
 	//assigment
@@ -747,16 +748,6 @@ void Confidence::QualityTerm(std::vector<CofidenceValue> & vReWardMap,
 		vReWardMap[vMeasuredGridIdx[i]].quality = fHausRes;
 
 	}
-
-	std::ofstream oRawFile;
-	oRawFile.open("testfractal.txt", std::ios::out | std::ios::app);
-	for(int i = 0 ;i != pNearCloud->points.size(); ++i){
-		oRawFile << pNearCloud->points[i].x << " "
-		         << pNearCloud->points[i].y << " "
-		         << pNearCloud->points[i].z << " "
-		         << std::endl;
-    }//end for j
-	oRawFile.close();
 
 }
 

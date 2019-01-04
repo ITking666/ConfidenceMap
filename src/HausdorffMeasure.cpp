@@ -339,15 +339,14 @@ float HausdorffDimension::BoxCounting(const pcl::PointCloud<pcl::PointXYZ> & vCl
 	oFirstScaleRes.boxNum = log(float(boxnumber));
 	oFirstScaleRes.boxScale = log(boxsize);
 	vSpectrum.push_back(oFirstScaleRes);
-
-	std::cout << "n:" << m_iIterMax << "sca: " << boxsize << ",num: " << boxnumber << std::endl;
 	
 	//current iterion time
 	int iters = m_iIterMax - 1;
 
 	//counting boxes at different scale using a loop 
 	//the smaller the scale be used, the smaller the box becames
-	while(iters - m_iIterMin + 1){
+	//it does not make scene when the measuring scale is larger than the length of bounding box
+	while(iters - m_iIterMin + 1 > 0){
 		
 		boxnumber = 0;
 		boxsize = boxsize * 2.0;
@@ -406,8 +405,6 @@ float HausdorffDimension::BoxCounting(const pcl::PointCloud<pcl::PointXYZ> & vCl
 		HitsInScale oScaleRes;
 		oScaleRes.boxNum = log(float(boxnumber));
 		oScaleRes.boxScale = log(boxsize);
-	
-		std::cout << "n:" << iters << " ,sca: " << boxsize << " ,num: " << boxnumber << std::endl;
 	
 		vSpectrum.push_back(oScaleRes);
 		

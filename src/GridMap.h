@@ -137,6 +137,10 @@ public:
 		              int & iQuerySY,
 		              const int & iQueryGridIdx);
 
+	//compute the index based on the given x, y series number 
+	int ComputeGridIdx(const int & iSX,
+		               const int & iSY);
+
 	//non-minimum suppression
 	std::vector<int> NonMinimumSuppression();
 
@@ -150,13 +154,12 @@ public:
 	//the normal vector in each pixel
 	std::vector<NormalVector2D> m_vNormalVecMap;
 
+	//the number of grids in length or width
+	int m_iGridNum;
+
 private:
 
 	inline bool JudgeRefreshMask(const float & fRadiusGridsNum);
-
-	//compute the index based on the given x, y series number 
-	inline int ComputeGridIdx(const int & iSX, 
-		                      const int & iSY);
 
 	//size of each pixel in map
 	float m_fGridSize;
@@ -164,8 +167,6 @@ private:
 	//size of map (length of map to be scanned)
 	float m_fMapTotalLength;
 
-	//the number of grids in length or width
-	int m_iGridNum;
 	float m_fMinGridCorner;
 
 	//search mask

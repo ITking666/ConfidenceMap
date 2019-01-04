@@ -66,15 +66,15 @@ public:
     //the corresponding center position of unvisited nodes
 	std::vector<pcl::PointXYZ> m_vUnVisitCenters;
 
+	//TSP node which has been visited
+	std::vector<int> m_vVisitedNodeIdx;
+	//std::vector<pcl::PointXYZ> vVisitedCenters;
+
 private:
 
 	//the grid index where the current robot is  
 	int m_iCurrentNodeIdx;
 	pcl::PointXYZ m_oCurrentCenter;
-
-	//TSP node which has been visited
-	std::vector<int> m_vVisitedNodeIdx;
-	//std::vector<pcl::PointXYZ> vVisitedCenters;
 
 };
 

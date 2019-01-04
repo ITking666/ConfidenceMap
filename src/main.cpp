@@ -6,6 +6,7 @@
 #include "LasOperator.h"
 #include "readtxt.h"
 #include "GridMap.h"
+#include "Astar.h"
 #include "Confidence.h"
 #include "GHPR.h"
 #include "TSP.h"
@@ -183,7 +184,7 @@ int main() {
 	//read data
 	std::vector<std::vector<double> > vRawData;
 	//read data for data file
-	ReadMatrix("test.txt", vRawData);
+	ReadMatrix("test2.txt", vRawData);
 	std::cout << "Reading data completed!" << std::endl;
 
 	//all point clouds
@@ -254,6 +255,9 @@ int main() {
 
 	Confidence oCofSolver(ROBOT_AFFECTDIS,4.2,5);
 
+	//define output
+	std::vector<pcl::PointXYZ> vAstarTrajectory;
+
 	//the scanning label in simulation
 	std::vector<PVGridStatus> vObstacleScan(pAllObstacleCloud->points.size());
 	std::vector<PVGridStatus> vTravelScan(pAllTravelCloud->points.size());
@@ -273,6 +277,11 @@ int main() {
 	oGridMaper.AssignPointsToMap(*pAllTravelCloud, vGridTravelPsIdx,2);
 	oGridMaper.AssignPointsToMap(*pAllBoundCloud, vGridBoundPsIdx,3);
 
+	std::vector<std::vector<int>> vAStarMap(oGridMaper.m_iGridNum);
+	for (int i = 0; i != oGridMaper.m_iGridNum; ++i) {
+		for(int j = 0; j != oGridMaper.m_iGridNum; ++j)
+		    vAStarMap[i].push_back(1);
+	}
 	//TSP class
 	TSP OLTSPSolver;
  
@@ -288,7 +297,7 @@ int main() {
 
 	//find scanning region of each node (site)
 	//while(iLoopCount!=10 && bOverFlag){
-    while(iLoopCount != 1 && bOverFlag){
+    while(iLoopCount != 5 && bOverFlag){
 		//judgement
 		bOverFlag = false;
 	    //robot location
@@ -298,7 +307,7 @@ int main() {
 		   oRobot.y =  OLTSPSolver.m_vUnVisitCenters[0].y;
 		   oRobot.z =  OLTSPSolver.m_vUnVisitCenters[0].z + ROBOT_HEIGHT;
 		}
-		std::cout << "iRobotGridIdx: "<< iRobotGridIdx << std::endl;
+		
 		//find scanning region
 	    std::vector<int> vNearbyGrids = oGridMaper.SearchGrids(iRobotGridIdx, ROBOT_AFFECTDIS/0.5);
 
@@ -340,11 +349,9 @@ int main() {
 
 		std::vector<pcl::PointXYZ> vVisibilityViews;
 		std::vector<pcl::PointXYZ> vCurVisitedViews;
-		std::cout << "2.5" << std::endl;
+		
 		OLTSPSolver.OutputVisitedNodes(vCurVisitedViews, pAllTravelCloud, vGridTravelPsIdx);
-		std::cout <<"visited viewpoint num: "<< vCurVisitedViews.size() << std::endl;
-		std::cout <<" vCurVisitedViews.size() - 1: " << vCurVisitedViews.size() - 1 << std::endl;
-		std::cout <<" vCurVisitedViews.size() - 2: " << int(vCurVisitedViews.size()) - 2 << std::endl;
+
 
 		for (int i = int(vCurVisitedViews.size()) - 1; i >= 0 && i>= int(vCurVisitedViews.size())-1;--i) {
 		
@@ -353,7 +360,7 @@ int main() {
 			oOnePoint.y = vCurVisitedViews[i].y;
 			oOnePoint.z = vCurVisitedViews[i].z + ROBOT_HEIGHT;
 			vVisibilityViews.push_back(oOnePoint);
-			std::cout << "got it" << std::endl;
+		
 		}
 
 		//visibility term
@@ -370,7 +377,7 @@ int main() {
 				oGridMaper.m_vReWardMap[vNearbyGrids[i]].iLabel == 3){
 
 					if(oGridMaper.m_vReWardMap[vNearbyGrids[i]].Hausdorffflag){
-				       std::vector<int> vNearbyQualityGrids = oGridMaper.SearchGrids(vNearbyGrids[i], 3.0);
+				       std::vector<int> vNearbyQualityGrids = oGridMaper.SearchGrids(vNearbyGrids[i], 4.0);
 			           oCofSolver.QualityTerm(oGridMaper.m_vReWardMap, vNearbyQualityGrids, *pAllBoundCloud,
 					                           vGVBoundPsIdx, *pAllObstacleCloud, vGVObsPsIdx);
 
@@ -380,6 +387,7 @@ int main() {
 					}//end if oGridMaper.m_vReWardMap[vNearbyGrids[i]].Hausdorffflag
 			}//end if
 		}
+
 		for(int i = 0; i != vNearbyGrids.size(); ++i)
 			oGridMaper.m_vReWardMap[vNearbyGrids[i]].Hausdorffflag = true;
 
@@ -391,8 +399,8 @@ int main() {
 		std::vector<int> vNodeGridIdxs = oGridMaper.NonMinimumSuppression();
 
 		//OLTSP calculation
-		OLTSPSolver.GetCurrentLocation(pAllTravelCloud, vGridTravelPsIdx, iRobotGridIdx);
-		OLTSPSolver.GetNewNodes(pAllTravelCloud, vGridTravelPsIdx, vNodeGridIdxs);
+		OLTSPSolver.GetCurrentLocation(pAllTravelCloud, vGVTravelPsIdx, iRobotGridIdx);
+		OLTSPSolver.GetNewNodes(pAllTravelCloud, vGVTravelPsIdx, vNodeGridIdxs);
 		OLTSPSolver.GTR(oGridMaper.m_vReWardMap);
 
 		iLoopCount = iLoopCount + 1;
@@ -400,6 +408,50 @@ int main() {
 
 		if (OLTSPSolver.m_vUnVisitNodeIdx.size())
 			bOverFlag = true;
+
+		//***********************Local path optimal**********************
+		std::cout << "3" << std::endl;
+		if(bOverFlag){
+		
+			//assignment
+			for (int i = 0; i != oGridMaper.m_vReWardMap.size();++i) {
+
+				int iQuerySX;
+				int iQuerySY;
+				oGridMaper.IntoXYSeries(iQuerySX, iQuerySY, i);
+
+				if(oGridMaper.m_vReWardMap[i].travelable == 1)
+				   vAStarMap[iQuerySX][iQuerySY] = 0;
+				else
+				   vAStarMap[iQuerySX][iQuerySY] = 1;
+			
+			}
+	        std::cout << "3.1" << std::endl;
+			Astar astar;
+			astar.InitAstar(vAStarMap);
+
+			//set the beginning and ending of local path (moving between two sites)			
+			int iLclPthPntSX;//
+			int iLclPthPntSY;
+			oGridMaper.IntoXYSeries(iLclPthPntSX, iLclPthPntSY, OLTSPSolver.m_vVisitedNodeIdx[OLTSPSolver.m_vVisitedNodeIdx.size() - 1]);
+			GridNode oLocalPathStart(iLclPthPntSX, iLclPthPntSY);
+			oGridMaper.IntoXYSeries(iLclPthPntSX, iLclPthPntSY, OLTSPSolver.m_vUnVisitNodeIdx[0]);
+			GridNode oLocalPathEnd(iLclPthPntSX, iLclPthPntSY);
+
+			//A-star is to get the paths
+			std::cout << "3.2" << std::endl;
+			list<GridNode *> vLocalPath = astar.GetPath(oLocalPathStart, oLocalPathEnd, false);
+			//save the trajectory
+			for (auto &pPathPoints : vLocalPath) {
+
+				int iQueryAstarIdx = oGridMaper.ComputeGridIdx(pPathPoints->x, pPathPoints->y);
+				pcl::PointXYZ oAStarPoint = TSP::ComputeCentersPosition(pAllTravelCloud, vGVTravelPsIdx, iQueryAstarIdx);
+				vAstarTrajectory.push_back(oAStarPoint);
+
+			}
+
+
+        }
 
 	}//while
 
@@ -414,7 +466,7 @@ int main() {
 	std::vector<float> vConfidenceValue;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr pBackgroundCloud(new pcl::PointCloud<pcl::PointXYZ>);
 	std::vector<int> vBGLabels;
-	std::cout << "3" << std::endl;
+	std::cout << "4" << std::endl;
 
 	//for display the result
 	for (int i = 0; i != oGridMaper.m_vReWardMap.size(); ++i) {
@@ -527,7 +579,7 @@ int main() {
 		                               "redgreen", "assign");
 	//viewer = hpdisplay.Showclassification(pAllCloud, vLabels,"assign");
 	//add simulated robot point for display
-	for (int i = 0; i != vViewPoints.size(); ++i) {
+	for (int i = 0; i != vAstarTrajectory.size(); ++i) {
 		stringstream viewpointstream;
 		viewpointstream << i << "th_view";
 		std::string numlabel;
@@ -536,10 +588,10 @@ int main() {
 		arrowstream << i << "_" << i + 1 << "_arrow";
 		std::string arrowNumLabel;
 		arrowstream >> arrowNumLabel;
-		vViewPoints[i].z = vViewPoints[i].z + ROBOT_HEIGHT;
-		viewer->addSphere(vViewPoints[i], 0.2, float(i + 1) / float(vViewPoints.size()), float(i + 1) / float(vViewPoints.size()), float(i + 1) / float(vViewPoints.size()), numlabel.c_str());
+		vAstarTrajectory[i].z = vAstarTrajectory[i].z + ROBOT_HEIGHT;
+		viewer->addSphere(vAstarTrajectory[i], 0.2, float(i + 1) / float(vAstarTrajectory.size()), float(i + 1) / float(vAstarTrajectory.size()), float(i + 1) / float(vAstarTrajectory.size()), numlabel.c_str());
 		if (i)
-			viewer->addArrow(vViewPoints[i], vViewPoints[i - 1], 0.0, 0.0, 1.0, false, arrowNumLabel.c_str());
+			viewer->addArrow(vAstarTrajectory[i], vAstarTrajectory[i - 1], 0.0, 0.0, 1.0, false, arrowNumLabel.c_str());
 	}
 
 	for (int i = 0; i != vUnVisitedView.size(); ++i) {
