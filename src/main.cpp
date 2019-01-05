@@ -3,13 +3,15 @@
 ////            Next best viewpoint based approaches
 ////*************************************************************
 #include "HpdPointCloudDisplay.h"
+#include "CurveFitting.h"
 #include "LasOperator.h"
+#include "Confidence.h"
 #include "readtxt.h"
 #include "GridMap.h"
 #include "Astar.h"
-#include "Confidence.h"
 #include "GHPR.h"
 #include "TSP.h"
+
 #include <iostream>
 #include <fstream>
 #include <cmath>
@@ -297,7 +299,7 @@ int main() {
 
 	//find scanning region of each node (site)
 	//while(iLoopCount!=10 && bOverFlag){
-    while(iLoopCount != 5 && bOverFlag){
+    while(iLoopCount != 1 && bOverFlag){
 		//judgement
 		bOverFlag = false;
 	    //robot location
@@ -441,17 +443,27 @@ int main() {
 			//A-star is to get the paths
 			std::cout << "3.2" << std::endl;
 			list<GridNode *> vLocalPath = astar.GetPath(oLocalPathStart, oLocalPathEnd, false);
+
+			pcl::PointCloud<pcl::PointXYZ>::Ptr pAstarAnchors(new pcl::PointCloud<pcl::PointXYZ>);
 			//save the trajectory
 			for (auto &pPathPoints : vLocalPath) {
 
 				int iQueryAstarIdx = oGridMaper.ComputeGridIdx(pPathPoints->x, pPathPoints->y);
 				pcl::PointXYZ oAStarPoint = TSP::ComputeCentersPosition(pAllTravelCloud, vGVTravelPsIdx, iQueryAstarIdx);
+				//pAstarAnchors->points.push_back(oAStarPoint);
 				vAstarTrajectory.push_back(oAStarPoint);
-
 			}
 
+			//spline optimal
+		/*	Spline oBezierLine;
+			std::vector<std::vector<pcl::PointXYZ>> vOneBezierSpline;
+			std::vector<pcl::PointXYZ> vOneLocalPath;
+			oBezierLine.NonSingularityBezierSplineGeneration(vOneBezierSpline, pAstarAnchors, 0.01);
+			oBezierLine.TransforContinuousSpline(vOneLocalPath, vOneBezierSpline);
+			for(int i = 0; i != vOneLocalPath.size(); ++i)
+				vAstarTrajectory.push_back(vOneLocalPath[i]);*/
 
-        }
+        }//if bOverFlag
 
 	}//while
 
@@ -577,7 +589,7 @@ int main() {
 	viewer = hpdisplay.ShowMixedResult(pKnownCloud, vConfidenceValue,
 		                               pBackgroundCloud, vBGLabels,
 		                               "redgreen", "assign");
-	//viewer = hpdisplay.Showclassification(pAllCloud, vLabels,"assign");
+	
 	//add simulated robot point for display
 	for (int i = 0; i != vAstarTrajectory.size(); ++i) {
 		stringstream viewpointstream;
@@ -590,8 +602,8 @@ int main() {
 		arrowstream >> arrowNumLabel;
 		vAstarTrajectory[i].z = vAstarTrajectory[i].z + ROBOT_HEIGHT;
 		viewer->addSphere(vAstarTrajectory[i], 0.2, float(i + 1) / float(vAstarTrajectory.size()), float(i + 1) / float(vAstarTrajectory.size()), float(i + 1) / float(vAstarTrajectory.size()), numlabel.c_str());
-		if (i)
-			viewer->addArrow(vAstarTrajectory[i], vAstarTrajectory[i - 1], 0.0, 0.0, 1.0, false, arrowNumLabel.c_str());
+		//if (i)
+		//	viewer->addArrow(vAstarTrajectory[i], vAstarTrajectory[i - 1], 0.0, 0.0, 1.0, false, arrowNumLabel.c_str());
 	}
 
 	for (int i = 0; i != vUnVisitedView.size(); ++i) {
@@ -606,7 +618,7 @@ int main() {
 		unarrowstream >> unArrowNumLabel;
 
 		vUnVisitedView[i].z = vUnVisitedView[i].z + ROBOT_HEIGHT;
-		viewer->addSphere(vUnVisitedView[i], 0.2, 1.0, 0.0, 0.0, unviewpointnumlabel.c_str());
+		viewer->addSphere(vUnVisitedView[i], 0.1, 1.0, 0.0, 0.0, unviewpointnumlabel.c_str());
 		if (i)
 			viewer->addArrow(vUnVisitedView[i], vUnVisitedView[i - 1], 1.0, 0.0, 0.0, false, unArrowNumLabel.c_str());
 		else
