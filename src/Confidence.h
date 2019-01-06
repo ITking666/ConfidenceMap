@@ -47,7 +47,7 @@ public:
 	
 	inline float VectorInnerProduct(const pcl::PointXYZ & oAVec,
 		                            const pcl::PointXYZ & oBVec);
-
+	
 	//Gaussian Kernel Function
 	inline float GaussianKernel(const pcl::PointXYZ & oQueryPo,
 		                       const pcl::PointXYZ & oTargerPo,
@@ -94,6 +94,13 @@ public:
 		                      const PCLCloudXYZ & vTravelCloud,
 		const std::vector<std::vector<int>> & vGridTravelPsIdx);
 
+	void DisBoundTerm(std::vector<CofidenceValue> & vReWardMap,
+		                                                 const pcl::PointXYZ & oRobotPoint,
+		                                           const std::vector<int> & vNeighborGrids,
+		                                                  const PCLCloudXYZ & vTravelCloud,
+		                            const std::vector<std::vector<int>> & vGridTravelPsIdx,
+		                                                   const PCLCloudXYZ & vBoundCloud,
+		                             const std::vector<std::vector<int>> & vGridBoundPsIdx);
 	//2. quality term of confidence map
 	//void QualityTermUsingDensity(std::vector<CofidenceValue> & vReWardMap,
 	//	                          const std::vector<int> & vNeighborGrids,

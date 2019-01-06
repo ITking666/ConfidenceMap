@@ -157,7 +157,7 @@ void GridMap::AssignPointsToMap(const PCLCloudXYZ & vCloud,
 
 }
 
-int GridMap::AssignPointToMap(const pcl::PointXYZ & oQueryPoint){
+int GridMap::AssignPointToMap(const pcl::PointXYZ & oQueryPoint) {
 
 	//
 	int iSX = int(floor((oQueryPoint.x - m_fMinGridCorner) / m_fGridSize));
@@ -173,7 +173,24 @@ int GridMap::AssignPointToMap(const pcl::PointXYZ & oQueryPoint){
 	return ComputeGridIdx(iSX, iSY);
 		
 }
-
+//int GridMap::AssignPointToMap(const pcl::PointXYZ & oQueryPoint,
+//	m_fMinGridCorner,
+//	m_fGridSize) {
+//
+//	//
+//	int iSX = int(floor((oQueryPoint.x - m_fMinGridCorner) / m_fGridSize));
+//	if (iSX < 0 || iSX >= m_iGridNum)
+//		return -1;
+//
+//	//
+//	int iSY = int(floor((oQueryPoint.y - m_fMinGridCorner) / m_fGridSize));
+//	if (iSY < 0 || iSY >= m_iGridNum)
+//		return -1;
+//
+//	//
+//	return ComputeGridIdx(iSX, iSY);
+//
+//}
 
 //sampling point clouds
 void GridMap::SamplingCloudUsingMap(int & numSampling) {

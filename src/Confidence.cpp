@@ -622,6 +622,120 @@ void Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWardMap,
 
 }
 
+
+void Confidence::DisBoundTerm(std::vector<CofidenceValue> & vReWardMap,
+	                                         const pcl::PointXYZ & oRobotPoint,
+	                                   const std::vector<int> & vNeighborGrids,
+	                                          const PCLCloudXYZ & vTravelCloud,
+	                    const std::vector<std::vector<int>> & vGridTravelPsIdx,
+	                                           const PCLCloudXYZ & vBoundCloud,
+	                     const std::vector<std::vector<int>> & vGridBoundPsIdx){
+
+	//**********Measurement item************
+	//intermediate variables
+	std::vector<float> vDisPartValue;///<distance weight part 
+	vDisPartValue.resize(vNeighborGrids.size(), 0.0);
+
+	std::vector<float> vBoundPartValue;///<boundary weight part
+	vBoundPartValue.resize(vNeighborGrids.size(), 0.0);
+
+	std::vector<pcl::PointXYZ> vTravelCenterPoints;///<center points of each neighboring grids
+	pcl::PointCloud<pcl::PointXYZ>::Ptr pObsCenters(new pcl::PointCloud<pcl::PointXYZ>);
+
+	vTravelCenterPoints.reserve(vNeighborGrids.size());
+	pcl::PointXYZ oZeroCenter;
+	oZeroCenter.x = 0.0;
+	oZeroCenter.y = 0.0;
+	oZeroCenter.z = 0.0;
+	//center of grid is x=0,y=0,z=0 if this grid is empty
+	for (int i = 0; i != vNeighborGrids.size(); ++i)
+		vTravelCenterPoints.push_back(oZeroCenter);
+
+	//count how many neighboring grid has point 
+	float fNonEmptyNum = 0.0;
+
+	//the grid center at which the robot is
+	float fMaxDisValue = -FLT_MAX;
+	pcl::PointXYZ oRobotGridCenter;
+	oRobotGridCenter.x = 0.0;
+	oRobotGridCenter.y = 0.0;
+	oRobotGridCenter.z = 0.0;
+
+	//**compute the distance part** 
+	for (int i = 0; i != vNeighborGrids.size(); ++i) {
+
+			//non-empty ground grid
+			if (vReWardMap[vNeighborGrids[i]].iLabel == 2) {
+
+				//compute the center of each neighboring grid
+				vTravelCenterPoints[i] = ComputeCenter(vTravelCloud, vGridTravelPsIdx[vNeighborGrids[i]]);
+
+				//compute smooth distance using Gaussin Kernel based on the center point
+				//the empty grid has zero value in this term
+				vDisPartValue[i] = GaussianKernel(oRobotPoint, vTravelCenterPoints[i], m_fSigma);
+
+			}
+			else if (vReWardMap[vNeighborGrids[i]].iLabel == 3
+				&& vReWardMap[vNeighborGrids[i]].bKnownFlag) {//if the point is not a ground
+				
+				pcl::PointXYZ oObsCenter = ComputeCenter(vBoundCloud, vGridBoundPsIdx[vNeighborGrids[i]]);
+
+				//get the obstacle point
+				pObsCenters->points.push_back(oObsCenter);
+
+			}
+		
+
+	}//end i
+
+	 //**compute the center part**
+	 //compute the center point 
+	pcl::KdTreeFLANN<pcl::PointXYZ> oBoundTree;
+	oBoundTree.setInputCloud(pObsCenters);
+
+	//for each non-empty neighboring grid
+	for (int i = 0; i != vNeighborGrids.size(); ++i) {
+		//non-empty
+		if (vGridTravelPsIdx[vNeighborGrids[i]].size()) {
+			//compute the distance between boundary and travelable region
+			std::vector<int> vSearchIdx;
+			std::vector<float> vSearchDis;
+			
+			oBoundTree.nearestKSearch(vTravelCenterPoints[i], 1, vSearchIdx, vSearchDis);
+			
+            //compute the boundary distance 
+			vBoundPartValue[i] = (m_fSigma - vSearchDis[0])/ m_fSigma;
+			if (vBoundPartValue[i] < 0)
+				vBoundPartValue[i] = 0.0;
+
+		}//end if (vGridTravelPsIdx[vNeighborGrids[i]].size())
+
+	}//end i 
+
+
+	 //** compute the total result** 
+	 //std::vector<float> vTotalDisValue;
+	 //for(int i=0;i!=vNeighborGrids.size();++i){
+	 //	vTotalDisValue.push_back(vCenterPartValue[i] * vDisPartValue[i]);
+	 //}
+
+	 //**********Incremental item************
+	 //fd(p) = max(fd(pi))  
+	for (int i = 0; i != vNeighborGrids.size(); ++i) {
+
+		if (vReWardMap[vNeighborGrids[i]].iLabel == 2) {
+			//get maximum value of distance term
+			if (vReWardMap[vNeighborGrids[i]].disTermVal < (0.7 * vDisPartValue[i] + 0.3 * vBoundPartValue[i]) )
+				vReWardMap[vNeighborGrids[i]].disTermVal = (0.7 * vDisPartValue[i] + 0.3 * vBoundPartValue[i]) ;
+
+			  if (vReWardMap[vNeighborGrids[i]].disTermVal < vBoundPartValue[i]){
+	
+					vReWardMap[vNeighborGrids[i]].disTermVal = vBoundPartValue[i];}
+		}
+
+	}
+
+}
 /*************************************************
 Function: QualityTermUsingDensity
 Description: the function is to compute the distance feature to the confidence value
@@ -739,13 +853,13 @@ void Confidence::QualityTerm(std::vector<CofidenceValue> & vReWardMap,
 	//set the dimension type
 	oHDor.SetParaQ(0);
 	//compute the Hausdorff result
-
+	std::cout << "pNearCloud->points.size(): " << pNearCloud->points.size() << std::endl;
 	float fHausRes = oHDor.BoxCounting(*pNearCloud);
-
+    std::cout << "fHausRes: " << fHausRes << std::endl;
 	//assigment
 	for (int i = 0; i != vMeasuredGridIdx.size(); ++i) {
 	
-		vReWardMap[vMeasuredGridIdx[i]].quality = fHausRes;
+		vReWardMap[vMeasuredGridIdx[i]].quality = fabs(fHausRes - 2.0f);
 
 	}
 

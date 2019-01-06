@@ -2,6 +2,7 @@
 ////***********************************************************
 ////            Next best viewpoint based approaches
 ////*************************************************************
+#include "LocalPathOptimization.h"
 #include "HpdPointCloudDisplay.h"
 #include "CurveFitting.h"
 #include "LasOperator.h"
@@ -186,7 +187,7 @@ int main() {
 	//read data
 	std::vector<std::vector<double> > vRawData;
 	//read data for data file
-	ReadMatrix("test2.txt", vRawData);
+	ReadMatrix("test.txt", vRawData);
 	std::cout << "Reading data completed!" << std::endl;
 
 	//all point clouds
@@ -299,7 +300,7 @@ int main() {
 
 	//find scanning region of each node (site)
 	//while(iLoopCount!=10 && bOverFlag){
-    while(iLoopCount != 1 && bOverFlag){
+    while(iLoopCount != 5 && bOverFlag){
 		//judgement
 		bOverFlag = false;
 	    //robot location
@@ -347,7 +348,8 @@ int main() {
 
 		oGridMaper.RegionGrow(vNearbyGrids);
 		
-		oCofSolver.DistanceTerm(oGridMaper.m_vReWardMap, oRobot, vNearbyGrids, *pAllTravelCloud, vGVTravelPsIdx);
+		oCofSolver.DisBoundTerm(oGridMaper.m_vReWardMap, oRobot, vNearbyGrids,
+			        *pAllTravelCloud, vGVTravelPsIdx,*pAllBoundCloud, vGVBoundPsIdx);
 
 		std::vector<pcl::PointXYZ> vVisibilityViews;
 		std::vector<pcl::PointXYZ> vCurVisitedViews;
@@ -373,22 +375,34 @@ int main() {
         }
 
 		//quality term
+		PathOptimization oPathOptimer;
 		for(int i = 0; i != vNearbyGrids.size(); ++i){
-			
-			if(oGridMaper.m_vReWardMap[vNearbyGrids[i]].iLabel == 1 ||
+			//if it has been scanned
+			if (oGridMaper.m_vReWardMap[vNearbyGrids[i]].bKnownFlag){
+				//if it is a obstacle grid
+				if(oGridMaper.m_vReWardMap[vNearbyGrids[i]].iLabel == 1 ||
 				oGridMaper.m_vReWardMap[vNearbyGrids[i]].iLabel == 3){
-
+					//if has not been computed
 					if(oGridMaper.m_vReWardMap[vNearbyGrids[i]].Hausdorffflag){
+					   //
 				       std::vector<int> vNearbyQualityGrids = oGridMaper.SearchGrids(vNearbyGrids[i], 4.0);
+					   //compute the quality by using hasudorff
 			           oCofSolver.QualityTerm(oGridMaper.m_vReWardMap, vNearbyQualityGrids, *pAllBoundCloud,
 					                           vGVBoundPsIdx, *pAllObstacleCloud, vGVObsPsIdx);
 
+					   if (oGridMaper.m_vReWardMap[vNearbyGrids[i]].quality > 0.8) {
+					       QualityPair oQualityPair;
+					       oQualityPair.idx = vNearbyGrids[i];
+					       oQualityPair.quality = oGridMaper.m_vReWardMap[vNearbyGrids[i]].quality;
+					       oPathOptimer.m_vControls.push_back(oQualityPair);
+                       }
 					   for(int i=0;i!=vNearbyQualityGrids.size();++i)
 						   oGridMaper.m_vReWardMap[vNearbyQualityGrids[i]].Hausdorffflag = false;
 
 					}//end if oGridMaper.m_vReWardMap[vNearbyGrids[i]].Hausdorffflag
+				}//end if
 			}//end if
-		}
+		}//end for int i
 
 		for(int i = 0; i != vNearbyGrids.size(); ++i)
 			oGridMaper.m_vReWardMap[vNearbyGrids[i]].Hausdorffflag = true;
@@ -413,22 +427,22 @@ int main() {
 
 		//***********************Local path optimal**********************
 		std::cout << "3" << std::endl;
-		if(bOverFlag){
-		
+		if (bOverFlag) {
+
 			//assignment
-			for (int i = 0; i != oGridMaper.m_vReWardMap.size();++i) {
+			for (int i = 0; i != oGridMaper.m_vReWardMap.size(); ++i) {
 
 				int iQuerySX;
 				int iQuerySY;
 				oGridMaper.IntoXYSeries(iQuerySX, iQuerySY, i);
 
-				if(oGridMaper.m_vReWardMap[i].travelable == 1)
-				   vAStarMap[iQuerySX][iQuerySY] = 0;
+				if (oGridMaper.m_vReWardMap[i].travelable == 1)
+					vAStarMap[iQuerySX][iQuerySY] = 0;
 				else
-				   vAStarMap[iQuerySX][iQuerySY] = 1;
-			
+					vAStarMap[iQuerySX][iQuerySY] = 1;
+
 			}
-	        std::cout << "3.1" << std::endl;
+
 			Astar astar;
 			astar.InitAstar(vAStarMap);
 
@@ -444,24 +458,36 @@ int main() {
 			std::cout << "3.2" << std::endl;
 			list<GridNode *> vLocalPath = astar.GetPath(oLocalPathStart, oLocalPathEnd, false);
 
-			pcl::PointCloud<pcl::PointXYZ>::Ptr pAstarAnchors(new pcl::PointCloud<pcl::PointXYZ>);
+			pcl::PointCloud<pcl::PointXYZ>::Ptr pAnchors(new pcl::PointCloud<pcl::PointXYZ>);
 			//save the trajectory
 			for (auto &pPathPoints : vLocalPath) {
 
 				int iQueryAstarIdx = oGridMaper.ComputeGridIdx(pPathPoints->x, pPathPoints->y);
 				pcl::PointXYZ oAStarPoint = TSP::ComputeCentersPosition(pAllTravelCloud, vGVTravelPsIdx, iQueryAstarIdx);
-				//pAstarAnchors->points.push_back(oAStarPoint);
-				vAstarTrajectory.push_back(oAStarPoint);
+				pAnchors->points.push_back(oAStarPoint);
+				//vAstarTrajectory.push_back(oAStarPoint);
 			}
 
+			oPathOptimer.SortFromBigtoSmall();
+			for (int i = 0; i != oPathOptimer.m_vControls.size(); ++i) {
+				std::cout << "quality: " << oPathOptimer.m_vControls[i].quality << std::endl;
+			}
+
+			oPathOptimer.GetControlCenter(pAllObstacleCloud, vGVObsPsIdx);
+			std::cout << "hausdorff dims: " << std::endl;
+
+			oPathOptimer.NewLocalPath(pAnchors, oGridMaper,1.5);
+			std::cout << "size: " << pAnchors->points.size() << std::endl;
 			//spline optimal
-		/*	Spline oBezierLine;
+			Spline oBezierLine;
 			std::vector<std::vector<pcl::PointXYZ>> vOneBezierSpline;
 			std::vector<pcl::PointXYZ> vOneLocalPath;
-			oBezierLine.NonSingularityBezierSplineGeneration(vOneBezierSpline, pAstarAnchors, 0.01);
+
+			oBezierLine.NonSingularityBezierSplineGeneration(vOneBezierSpline, pAnchors, 0.01);
 			oBezierLine.TransforContinuousSpline(vOneLocalPath, vOneBezierSpline);
+
 			for(int i = 0; i != vOneLocalPath.size(); ++i)
-				vAstarTrajectory.push_back(vOneLocalPath[i]);*/
+				vAstarTrajectory.push_back(vOneLocalPath[i]);
 
         }//if bOverFlag
 

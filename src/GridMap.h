@@ -124,6 +124,7 @@ public:
 	//
 	int AssignPointToMap(const pcl::PointXYZ & oQueryPoint);
 
+
 	//assign points to map
 	void AssignPointsToMap(const PCLCloudXYZ & vCloud, 
 		                   std::vector<std::vector<int>> & vGridPointIdx, 
