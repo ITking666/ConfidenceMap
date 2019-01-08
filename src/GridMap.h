@@ -5,7 +5,7 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/kdtree/impl/kdtree_flann.hpp>
-#define ROBOT_AFFECTDIS 8.00
+#define ROBOT_AFFECTDIS 10.00
 //*****************************
 //
 //confidence Value

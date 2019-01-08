@@ -57,7 +57,38 @@ pcl::PointXYZ TSP::ComputeCentersPosition(const pcl::PointCloud<pcl::PointXYZ>::
 	return oCenter;
 
 }
+//reload to output a center position with a successed flag
+bool TSP::ComputeCentersPosition(pcl::PointXYZ oCenter,
+	const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
+	const std::vector<std::vector<int>> & vGridPointIdx,
+	const int & iQueryIdx) {
 
+	//define output
+	oCenter.x = 0.0;
+	oCenter.y = 0.0;
+	oCenter.z = 0.0;
+
+	int fAllNumber = vGridPointIdx[iQueryIdx].size();
+	//find each points
+	for (int j = 0; j != fAllNumber; ++j) {
+
+		oCenter.x += pCloud->points[vGridPointIdx[iQueryIdx][j]].x;
+		oCenter.y += pCloud->points[vGridPointIdx[iQueryIdx][j]].y;
+		oCenter.z += pCloud->points[vGridPointIdx[iQueryIdx][j]].z;
+
+	}
+
+	if (!fAllNumber)
+		return false;
+
+	//averaging
+	oCenter.x = oCenter.x / float(fAllNumber);
+	oCenter.y = oCenter.y / float(fAllNumber);
+	oCenter.z = oCenter.z / float(fAllNumber);
+
+	return true;
+
+}
 
 
 float TSP::ComputeEuclideanDis(const pcl::PointXYZ & oQueryPoint,
@@ -219,10 +250,6 @@ bool TSP::GTR(const std::vector<CofidenceValue> & vReWardMap) {
 		return true;
     }
 
-	std::cout << "oQueryCenter: " << oQueryCenter.x << " "
-		<< oQueryCenter.y << " "
-		<< oQueryCenter.z << std::endl;
-
 	//loop of each query point
 	while(iRemainNum){
 	
@@ -239,7 +266,7 @@ bool TSP::GTR(const std::vector<CofidenceValue> & vReWardMap) {
 			   //cost function which considers the reward and cost of node
 		       float fPairCost = CostFunction(vReWardMap,iQueryIdx,oQueryCenter,
 				                                     iTargetIdx,oTargetCenter);
-			   std::cout << fPairCost << std::endl;
+			   
 		       //find the shorest route
 		       if (fPairCost < fMinCost) {
 			       fMinCost = fPairCost;

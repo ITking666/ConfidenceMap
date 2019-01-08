@@ -29,18 +29,22 @@ void PathOptimization::GetControlCenter(const pcl::PointCloud<pcl::PointXYZ>::Pt
                                         const std::vector<std::vector<int>> & vGridPointIdx) {
 
 	m_pControlCloud->points.clear();
+
 	for (int i = 0; i != m_vControls.size(); ++i) {
-
+		
 		//get the 3d center
-		pcl::PointXYZ oControlCenter =
-			TSP::ComputeCentersPosition(pCloud, vGridPointIdx, m_vControls[i].idx);
+		pcl::PointXYZ oControlCenter;
+		//if this grid has points(because the query gird only has boundary points sometimes)
+		//and our input is the obstacle points
+		if (TSP::ComputeCentersPosition(oControlCenter, pCloud, vGridPointIdx, m_vControls[i].idx)){
+			//only record x,y
+			pcl::PointXY oPoint;
+			oPoint.x = oControlCenter.x;
+			oPoint.y = oControlCenter.y;
+			m_pControlCloud->points.push_back(oPoint);
+		}//end if
 
-		//only record x,y
-		pcl::PointXY oPoint;
-		oPoint.x = oControlCenter.x;
-		oPoint.y = oControlCenter.y;
-		m_pControlCloud->points.push_back(oPoint);
-	}
+	}//end for
 
 }
 
@@ -61,8 +65,11 @@ void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud
 		oXYPoint.y = pCloud->points[i].y;
 		pLineCloud->points.push_back(oXYPoint);
 	}
-	std::cout << "total line number: " << pLineCloud->points.size() << std::endl;
+	
 	//construct a kdtree
+	if (!pLineCloud->points.size())
+		return;//return if nothing input
+
 	pcl::KdTreeFLANN<pcl::PointXY> oLineTree;
 	oLineTree.setInputCloud(pLineCloud);
 
@@ -83,13 +90,12 @@ void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud
 		std::vector<int> vSearchIdx;
 		std::vector<float> vSearchDis;
 		//search distance of center of sign based on max distance to center
-		std::cout << "m_pControlCloud->points[iQBoundIdx]: " << m_pControlCloud->points[iQBoundIdx] << std::endl;
-		std::cout << "m_pControlCloud->points[iQBoundIdx]: " << m_pControlCloud->points[iQBoundIdx] << std::endl;
+
 		oLineTree.nearestKSearch(m_pControlCloud->points[iQBoundIdx], 1, vSearchIdx, vSearchDis);
-		std::cout << "vSearchIdx[0]: " << vSearchIdx[0] << std::endl;
+	
 		//if the searched point is first point, which indicates the searched point is behind the line
 		if(vSearchIdx[0]){
-			std::cout << "vSearchIdx[0]1: " << vSearchIdx[0] << std::endl;
+			
 			//if this point has been computed
 			if (vLinePointStatus[vSearchIdx[0]] < 0){
 				
@@ -105,20 +111,16 @@ void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud
 
 				//compute the 
 				int iNewAncherIdx = oMap.AssignPointToMap(oNew3DAncher);
-				std::cout <<" new.x: " << oNew3DAncher.x << std::endl;
-				std::cout << "new.y: " << oNew3DAncher.y << std::endl;
+			
 				//if this new point is a ground point
 				if (oMap.m_vReWardMap[iNewAncherIdx].travelable == 1){
-					std::cout << "**3.0**" << std::endl;
-					std::cout << "searched point: " << vSearchIdx[0] << std::endl;
+					
 					std::vector<int> vRadiuSIdx;
 					std::vector<float> vRadiuSDis;
 					
 					//kdtree search
 					oLineTree.radiusSearch(pLineCloud->points[vSearchIdx[0]], fMoveDis, vRadiuSIdx, vRadiuSDis);
-					std::cout << vRadiuSIdx.size() << std::endl;
-					std::cout << " old.x: " << pLineCloud->points[vRadiuSIdx[0]].x << std::endl;
-					std::cout << " old.y: " << pLineCloud->points[vRadiuSIdx[0]].y << std::endl;
+					
 					for (int i = 0; i != vRadiuSIdx.size(); ++i)
 						vLinePointStatus[vRadiuSIdx[i]] = iQSuccess;
 					
@@ -137,6 +139,8 @@ void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud
 		
 	}//while
 
+	std::cout << "Control Point Success Times:  " << iQSuccess << std::endl;
+
 	//make sure the first and last point is remained
 	vLinePointStatus[0] = -1;
 	vLinePointStatus[vLinePointStatus.size() - 1] = -1;
@@ -152,7 +156,7 @@ void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud
 			vTempVec.push_back(pCloud->points[i]);
 		
 		}else if (vLinePointStatus[i] != iLabel) {
-			std::cout << "got it!" << std::endl;
+			
 			vTempVec.push_back(vNewAncherPoints[vLinePointStatus[i]]);
 			iLabel = vLinePointStatus[i];
 		}

@@ -354,7 +354,7 @@ void Spline::NonSingularityBezierSplineGeneration(std::vector<std::vector<pcl::P
 		float lastT = 0.0;//supervise the change of t value
 		while(t <= 1.0) { // draw one spline
 
-			 std::cout << "t=" << t << std::endl;
+			 //std::cout << "t=" << t << std::endl;
 			 //compute the x, y, z value of each point in the b - spline
 		     pcl::PointXYZ onePoint;
 		     onePoint.x = BezierComponentValue(P0.x, P1.x, P2.x, P3.x, t);

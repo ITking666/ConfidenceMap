@@ -7,6 +7,7 @@
 #include "CurveFitting.h"
 #include "LasOperator.h"
 #include "Confidence.h"
+#include "Evaluation.h"
 #include "readtxt.h"
 #include "GridMap.h"
 #include "Astar.h"
@@ -252,7 +253,7 @@ int main() {
 	std::vector<std::vector<int>> vGridObsPsIdx;
 
 
-	GridMap oGridMaper(0.5, 500.0, ROBOT_AFFECTDIS*0.5, 0.8);
+	GridMap oGridMaper(0.5, 500.0, ROBOT_AFFECTDIS*0.6, 0.8);
 	oGridMaper.InitializeMap();
 
 
@@ -287,7 +288,8 @@ int main() {
 	}
 	//TSP class
 	TSP OLTSPSolver;
- 
+	Evaluation oEvaluator;
+
 	int iRobotGridIdx = oGridMaper.AssignPointToMap(oRobot);
 	OLTSPSolver.GetNewNode(pAllTravelCloud, vGridTravelPsIdx, iRobotGridIdx);
 	oGridMaper.m_vReWardMap[iRobotGridIdx].travelable = 1;
@@ -297,10 +299,12 @@ int main() {
 	
 	bool bOverFlag = true;
 	int iLoopCount = 0;
+	
+	float fTotalMovingCost = 0.0;
 
 	//find scanning region of each node (site)
 	//while(iLoopCount!=10 && bOverFlag){
-    while(iLoopCount != 5 && bOverFlag){
+    while(bOverFlag && fTotalMovingCost <= 200.0){
 		//judgement
 		bOverFlag = false;
 	    //robot location
@@ -317,7 +321,7 @@ int main() {
 		//get the scanning point from neighboring region
 		pcl::PointCloud<pcl::PointXYZ>::Ptr pScanCloud(new pcl::PointCloud<pcl::PointXYZ>);
 		std::vector<ScanIndex> vScanPointIdx;
-		std::cout << "1" << std::endl;
+		
 		GetScanPoints(pScanCloud, vScanPointIdx, vNearbyGrids, oGridMaper,
 			          vGridBoundPsIdx,vGridTravelPsIdx, vGridObsPsIdx, 
 			          pAllObstacleCloud, pAllBoundCloud, pAllTravelCloud);
@@ -327,7 +331,7 @@ int main() {
 		
 		//compute the visibility of point clouds
 		std::vector<int> vVisableIdx = oGHPRer.ComputeVisibility(*pScanCloud, oRobot);
-		std::cout << "2" << std::endl;
+	
 		//record the scanning
 		RecordScanLabel(vObstacleScan, vTravelScan, vBoundScan,
 			                         vScanPointIdx, vVisableIdx);
@@ -345,17 +349,19 @@ int main() {
 				vGVBoundPsIdx[iQueryIdx].size())
 			oGridMaper.m_vReWardMap[vNearbyGrids[i]].bKnownFlag = true;
 		}
-
-		oGridMaper.RegionGrow(vNearbyGrids);
 		
+		oGridMaper.RegionGrow(vNearbyGrids);
+		std::cout << "***Compute travelable region success***" << std::endl;
+
 		oCofSolver.DisBoundTerm(oGridMaper.m_vReWardMap, oRobot, vNearbyGrids,
 			        *pAllTravelCloud, vGVTravelPsIdx,*pAllBoundCloud, vGVBoundPsIdx);
+		std::cout << "***Compute distance term success***" << std::endl;
 
 		std::vector<pcl::PointXYZ> vVisibilityViews;
 		std::vector<pcl::PointXYZ> vCurVisitedViews;
 		
 		OLTSPSolver.OutputVisitedNodes(vCurVisitedViews, pAllTravelCloud, vGridTravelPsIdx);
-
+		
 
 		for (int i = int(vCurVisitedViews.size()) - 1; i >= 0 && i>= int(vCurVisitedViews.size())-1;--i) {
 		
@@ -373,6 +379,7 @@ int main() {
 			                     *pAllTravelCloud, vGVTravelPsIdx, *pAllBoundCloud,
 			                     vGVBoundPsIdx,*pAllObstacleCloud, vGVObsPsIdx);
         }
+		std::cout << "***Compute visible term success***" << std::endl;
 
 		//quality term
 		PathOptimization oPathOptimer;
@@ -390,7 +397,7 @@ int main() {
 			           oCofSolver.QualityTerm(oGridMaper.m_vReWardMap, vNearbyQualityGrids, *pAllBoundCloud,
 					                           vGVBoundPsIdx, *pAllObstacleCloud, vGVObsPsIdx);
 
-					   if (oGridMaper.m_vReWardMap[vNearbyGrids[i]].quality > 0.8) {
+					   if (oGridMaper.m_vReWardMap[vNearbyGrids[i]].quality < 1.2) {
 					       QualityPair oQualityPair;
 					       oQualityPair.idx = vNearbyGrids[i];
 					       oQualityPair.quality = oGridMaper.m_vReWardMap[vNearbyGrids[i]].quality;
@@ -403,6 +410,7 @@ int main() {
 				}//end if
 			}//end if
 		}//end for int i
+		std::cout << "***Compute quality by using hausdorff success***" << std::endl;
 
 		for(int i = 0; i != vNearbyGrids.size(); ++i)
 			oGridMaper.m_vReWardMap[vNearbyGrids[i]].Hausdorffflag = true;
@@ -413,7 +421,7 @@ int main() {
 
 		//using the minimum suppression
 		std::vector<int> vNodeGridIdxs = oGridMaper.NonMinimumSuppression();
-
+		
 		//OLTSP calculation
 		OLTSPSolver.GetCurrentLocation(pAllTravelCloud, vGVTravelPsIdx, iRobotGridIdx);
 		OLTSPSolver.GetNewNodes(pAllTravelCloud, vGVTravelPsIdx, vNodeGridIdxs);
@@ -426,7 +434,7 @@ int main() {
 			bOverFlag = true;
 
 		//***********************Local path optimal**********************
-		std::cout << "3" << std::endl;
+		
 		if (bOverFlag) {
 
 			//assignment
@@ -455,9 +463,9 @@ int main() {
 			GridNode oLocalPathEnd(iLclPthPntSX, iLclPthPntSY);
 
 			//A-star is to get the paths
-			std::cout << "3.2" << std::endl;
+			
 			list<GridNode *> vLocalPath = astar.GetPath(oLocalPathStart, oLocalPathEnd, false);
-
+	
 			pcl::PointCloud<pcl::PointXYZ>::Ptr pAnchors(new pcl::PointCloud<pcl::PointXYZ>);
 			//save the trajectory
 			for (auto &pPathPoints : vLocalPath) {
@@ -468,23 +476,26 @@ int main() {
 				//vAstarTrajectory.push_back(oAStarPoint);
 			}
 
-			oPathOptimer.SortFromBigtoSmall();
-			for (int i = 0; i != oPathOptimer.m_vControls.size(); ++i) {
-				std::cout << "quality: " << oPathOptimer.m_vControls[i].quality << std::endl;
-			}
-
 			oPathOptimer.GetControlCenter(pAllObstacleCloud, vGVObsPsIdx);
-			std::cout << "hausdorff dims: " << std::endl;
-
+		
 			oPathOptimer.NewLocalPath(pAnchors, oGridMaper,1.5);
-			std::cout << "size: " << pAnchors->points.size() << std::endl;
+			std::cout << "***Compute local path success***" << std::endl;
+
 			//spline optimal
 			Spline oBezierLine;
 			std::vector<std::vector<pcl::PointXYZ>> vOneBezierSpline;
 			std::vector<pcl::PointXYZ> vOneLocalPath;
+			
 
 			oBezierLine.NonSingularityBezierSplineGeneration(vOneBezierSpline, pAnchors, 0.01);
 			oBezierLine.TransforContinuousSpline(vOneLocalPath, vOneBezierSpline);
+			std::cout << "***Compute spline success***" << std::endl;
+
+			//Evaluate the cost 
+
+			oEvaluator.AddDistanceValue(oEvaluator.ComputeMovingDis(vOneLocalPath));
+			oEvaluator.Output(fTotalMovingCost);
+			std::cout << "Total moving distance: "<< fTotalMovingCost << std::endl;
 
 			for(int i = 0; i != vOneLocalPath.size(); ++i)
 				vAstarTrajectory.push_back(vOneLocalPath[i]);
@@ -496,15 +507,15 @@ int main() {
 	//***************output***************
 
 	//ouput file
-	std::ofstream oRecordedFile;
-	oRecordedFile.open("res.txt", std::ios::out | std::ios::app);
+	std::ofstream oCloudOutFile;
+	oCloudOutFile.open("ScannedPointClouds.txt", std::ios::out | std::ios::app);
 
 	//display
 	pcl::PointCloud<pcl::PointXYZ>::Ptr pKnownCloud(new pcl::PointCloud<pcl::PointXYZ>);
 	std::vector<float> vConfidenceValue;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr pBackgroundCloud(new pcl::PointCloud<pcl::PointXYZ>);
 	std::vector<int> vBGLabels;
-	std::cout << "4" << std::endl;
+	
 
 	//for display the result
 	for (int i = 0; i != oGridMaper.m_vReWardMap.size(); ++i) {
@@ -519,7 +530,7 @@ int main() {
 					pKnownCloud->points.push_back(pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]]);
 					vConfidenceValue.push_back(oGridMaper.m_vReWardMap[i].totalValue);
 					//record the data in txt file for test
-					oRecordedFile   << pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].x << " "
+					oCloudOutFile   << pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].x << " "
 					            	<< pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].y << " "
 					            	<< pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].z << " "
 						            << oGridMaper.m_vReWardMap[i].disTermVal << " "
@@ -536,9 +547,9 @@ int main() {
 
 					pBackgroundCloud->points.push_back(pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]]);
 					vBGLabels.push_back(0);
-					oRecordedFile << pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].x << " "
-						<< pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].y << " "
-						<< pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].z << " "
+					oCloudOutFile << pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].x << " "
+						          << pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].y << " "
+						          << pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].z << " "
 						<< oGridMaper.m_vReWardMap[i].disTermVal << " "
 						<< oGridMaper.m_vReWardMap[i].visibility << " "
 						<< oGridMaper.m_vReWardMap[i].quality << " "
@@ -552,10 +563,10 @@ int main() {
 
 				pBackgroundCloud->points.push_back(pAllCloud->points[vAllBoundIdx[vGVBoundPsIdx[i][j]]]);
 				vBGLabels.push_back(0);
-				oRecordedFile << pAllCloud->points[vAllBoundIdx[vGVBoundPsIdx[i][j]]].x << " "
-					<< pAllCloud->points[vAllBoundIdx[vGVBoundPsIdx[i][j]]].y << " "
-					<< pAllCloud->points[vAllBoundIdx[vGVBoundPsIdx[i][j]]].z << " "
-					<< oGridMaper.m_vReWardMap[i].disTermVal << " "
+				oCloudOutFile << pAllCloud->points[vAllBoundIdx[vGVBoundPsIdx[i][j]]].x << " "
+					          << pAllCloud->points[vAllBoundIdx[vGVBoundPsIdx[i][j]]].y << " "
+					          << pAllCloud->points[vAllBoundIdx[vGVBoundPsIdx[i][j]]].z << " "
+					          << oGridMaper.m_vReWardMap[i].disTermVal << " "
 					<< oGridMaper.m_vReWardMap[i].visibility << " "
 					<< oGridMaper.m_vReWardMap[i].quality << " "
 					<< oGridMaper.m_vReWardMap[i].totalValue << " "
@@ -567,7 +578,7 @@ int main() {
 
 				pBackgroundCloud->points.push_back(pAllCloud->points[vAllObstacleIdx[vGVObsPsIdx[i][j]]]);
 				vBGLabels.push_back(0);
-				oRecordedFile << pAllCloud->points[vAllObstacleIdx[vGVObsPsIdx[i][j]]].x << " "
+				oCloudOutFile << pAllCloud->points[vAllObstacleIdx[vGVObsPsIdx[i][j]]].x << " "
 					<< pAllCloud->points[vAllObstacleIdx[vGVObsPsIdx[i][j]]].y << " "
 					<< pAllCloud->points[vAllObstacleIdx[vGVObsPsIdx[i][j]]].z << " "
 					<< oGridMaper.m_vReWardMap[i].disTermVal << " "
@@ -580,8 +591,19 @@ int main() {
 		}//end if (oGridMaper.m_vReWardMap[i].bKnownFlag)
 	}
 
-	std::cout << "4" << std::endl;
-
+	std::ofstream oTrajectoryFile;
+	oTrajectoryFile.open("Trajectory.txt", std::ios::out | std::ios::app);
+	//add simulated robot point for display
+	for (int i = 0; i != vAstarTrajectory.size(); ++i) {
+	
+		vAstarTrajectory[i].z = vAstarTrajectory[i].z + ROBOT_HEIGHT;
+		oTrajectoryFile << vAstarTrajectory[i].x << " "
+			            << vAstarTrajectory[i].y << " "
+			            << vAstarTrajectory[i].z << " " 
+		              	<< i << " " << std::endl;
+		//if (i)
+		//	viewer->addArrow(vAstarTrajectory[i], vAstarTrajectory[i - 1], 0.0, 0.0, 1.0, false, arrowNumLabel.c_str());
+	}
 
 	//std::vector<int> vLabels(pAllCloud->points.size(),0);
 	//for(int i=0;i!= oGridMaper.m_vReWardMap.size();++i){
@@ -600,8 +622,6 @@ int main() {
 
 	//}
 
-	std::cout << "5" << std::endl;
-
 	std::vector<pcl::PointXYZ> vViewPoints;
 	std::vector<pcl::PointXYZ> vUnVisitedView;
 	//OLTSPSolver.OutputUnVisitedNodes(vViewPoints);
@@ -617,7 +637,7 @@ int main() {
 		                               "redgreen", "assign");
 	
 	//add simulated robot point for display
-	for (int i = 0; i != vAstarTrajectory.size(); ++i) {
+	for (int i = 0; i < vAstarTrajectory.size(); i = i + 20) {
 		stringstream viewpointstream;
 		viewpointstream << i << "th_view";
 		std::string numlabel;
@@ -628,8 +648,7 @@ int main() {
 		arrowstream >> arrowNumLabel;
 		vAstarTrajectory[i].z = vAstarTrajectory[i].z + ROBOT_HEIGHT;
 		viewer->addSphere(vAstarTrajectory[i], 0.2, float(i + 1) / float(vAstarTrajectory.size()), float(i + 1) / float(vAstarTrajectory.size()), float(i + 1) / float(vAstarTrajectory.size()), numlabel.c_str());
-		//if (i)
-		//	viewer->addArrow(vAstarTrajectory[i], vAstarTrajectory[i - 1], 0.0, 0.0, 1.0, false, arrowNumLabel.c_str());
+		
 	}
 
 	for (int i = 0; i != vUnVisitedView.size(); ++i) {
@@ -703,14 +722,14 @@ int main() {
 
 
 ////output
-//std::ofstream oRecordedFile;
-//oRecordedFile.open(m_sOutPCFileName.str(), std::ios::out | std::ios::app);
+//std::ofstream oCloudOutFile;
+//oCloudOutFile.open(m_sOutPCFileName.str(), std::ios::out | std::ios::app);
 //
 //for (int i = 0; i != pCloud->points.size(); ++i) {
 //
 //	//output in a txt file
 //	//the storage type of output file is x y z time frames right/left_sensor
-//	oRecordedFile << pCloud->points[i].x << " "
+//	oCloudOutFile << pCloud->points[i].x << " "
 //		<< pCloud->points[i].y << " "
 //		<< pCloud->points[i].z << " "
 //		<< vRes[i] << " "
@@ -718,6 +737,6 @@ int main() {
 //		<< std::endl;
 //}//end for         
 //
-//oRecordedFile.close();
+//oCloudOutFile.close();
 //
 //}

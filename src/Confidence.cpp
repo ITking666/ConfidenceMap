@@ -688,30 +688,39 @@ void Confidence::DisBoundTerm(std::vector<CofidenceValue> & vReWardMap,
 
 	}//end i
 
-	 //**compute the center part**
-	 //compute the center point 
-	pcl::KdTreeFLANN<pcl::PointXYZ> oBoundTree;
-	oBoundTree.setInputCloud(pObsCenters);
+	 //**compute the center offset part**
+	 //maybe there is not any boundary in an open area
+	if (pObsCenters->points.size()) {
+		pcl::KdTreeFLANN<pcl::PointXYZ> oBoundTree;
+		oBoundTree.setInputCloud(pObsCenters);
 
-	//for each non-empty neighboring grid
-	for (int i = 0; i != vNeighborGrids.size(); ++i) {
-		//non-empty
-		if (vGridTravelPsIdx[vNeighborGrids[i]].size()) {
-			//compute the distance between boundary and travelable region
-			std::vector<int> vSearchIdx;
-			std::vector<float> vSearchDis;
-			
-			oBoundTree.nearestKSearch(vTravelCenterPoints[i], 1, vSearchIdx, vSearchDis);
-			
-            //compute the boundary distance 
-			vBoundPartValue[i] = (m_fSigma - vSearchDis[0])/ m_fSigma;
-			if (vBoundPartValue[i] < 0)
+		//for each non-empty neighboring grid
+		for (int i = 0; i != vNeighborGrids.size(); ++i) {
+			//non-empty
+			if (vGridTravelPsIdx[vNeighborGrids[i]].size()) {
+				//compute the distance between boundary and travelable region
+				std::vector<int> vSearchIdx;
+				std::vector<float> vSearchDis;
+
+				oBoundTree.nearestKSearch(vTravelCenterPoints[i], 1, vSearchIdx, vSearchDis);
+
+				//compute the boundary distance 
+				vBoundPartValue[i] = (m_fSigma - vSearchDis[0]) / m_fSigma;
+				if (vBoundPartValue[i] < 0)
+					vBoundPartValue[i] = 0.0;
+
+			}//end if (vGridTravelPsIdx[vNeighborGrids[i]].size())
+
+		}//end i 
+
+	}else {
+		for (int i = 0; i != vNeighborGrids.size(); ++i) {
+			//each one has the minimum value
+			if (vGridTravelPsIdx[vNeighborGrids[i]].size()) 
 				vBoundPartValue[i] = 0.0;
-
-		}//end if (vGridTravelPsIdx[vNeighborGrids[i]].size())
-
-	}//end i 
-
+		
+		}//end for
+	}
 
 	 //** compute the total result** 
 	 //std::vector<float> vTotalDisValue;
@@ -853,9 +862,9 @@ void Confidence::QualityTerm(std::vector<CofidenceValue> & vReWardMap,
 	//set the dimension type
 	oHDor.SetParaQ(0);
 	//compute the Hausdorff result
-	std::cout << "pNearCloud->points.size(): " << pNearCloud->points.size() << std::endl;
+
 	float fHausRes = oHDor.BoxCounting(*pNearCloud);
-    std::cout << "fHausRes: " << fHausRes << std::endl;
+    
 	//assigment
 	for (int i = 0; i != vMeasuredGridIdx.size(); ++i) {
 	
@@ -955,21 +964,21 @@ void Confidence::OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
 		//std::cout << teststream.str() <<" point size:  " << pOccCloud->points.size() << std::endl;
 		//std::string testfilename;
 		//teststream >> testfilename;
-		//std::ofstream oRecordedFile;
-		//oRecordedFile.open(testfilename.c_str(), std::ios::out | std::ios::app);
+		//std::ofstream oCloudOutFile;
+		//oCloudOutFile.open(testfilename.c_str(), std::ios::out | std::ios::app);
 		//std::vector<int> vRes(pOccCloud->points.size(),0);
 		//for (int i = 0; i != vVisableIdx.size(); ++i)
 		//	vRes[vVisableIdx[i]] = 1;
 
 		//for (int i=0;i!= pOccCloud->points.size();++i){
 		////record the data in txt file for test
-		//oRecordedFile << pOccCloud->points[i].x << " "
+		//oCloudOutFile << pOccCloud->points[i].x << " "
 		//	          << pOccCloud->points[i].y << " "
 		//	          << pOccCloud->points[i].z << " "
 		//	          << vRes[i] << " "
 		//	          << std::endl;
 		//}
-		//oRecordedFile << vHistoryViewPoints[i].x << " "
+		//oCloudOutFile << vHistoryViewPoints[i].x << " "
 		//	<< vHistoryViewPoints[i].y << " "
 		//	<< vHistoryViewPoints[i].z << " "
 		//	<< 2 << " "
