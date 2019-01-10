@@ -36,11 +36,13 @@ void PathOptimization::GetControlCenter(const pcl::PointCloud<pcl::PointXYZ>::Pt
 		pcl::PointXYZ oControlCenter;
 		//if this grid has points(because the query gird only has boundary points sometimes)
 		//and our input is the obstacle points
+
 		if (TSP::ComputeCentersPosition(oControlCenter, pCloud, vGridPointIdx, m_vControls[i].idx)){
 			//only record x,y
 			pcl::PointXY oPoint;
 			oPoint.x = oControlCenter.x;
 			oPoint.y = oControlCenter.y;
+			
 			m_pControlCloud->points.push_back(oPoint);
 		}//end if
 
@@ -65,24 +67,23 @@ void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud
 		oXYPoint.y = pCloud->points[i].y;
 		pLineCloud->points.push_back(oXYPoint);
 	}
-	
-	//construct a kdtree
-	if (!pLineCloud->points.size())
-		return;//return if nothing input
 
-	pcl::KdTreeFLANN<pcl::PointXY> oLineTree;
+	//if the distance is too short
+	if (pLineCloud->points.size() < iMinPathLength)
+		return;
+	//construct a kdtree
+    pcl::KdTreeFLANN<pcl::PointXY> oLineTree;
 	oLineTree.setInputCloud(pLineCloud);
 
-	int iQBoundIdx = 0;
-	int iQSuccess = 0;//The successed seed
-	
-	//if the distance is too short
-	if (m_pControlCloud->points.size() < iMinPathLength)
-		return;
-
+	//if can not constructed a tree
+	if (!m_pControlCloud->points.size())
+		return;//return if nothing input
+	//if control points is less
 	if (m_pControlCloud->points.size() < iMaxSearchTime)
 		iMaxSearchTime = m_pControlCloud->points.size();
 
+	int iQBoundIdx = 0;
+	int iQSuccess = 0;//The successed seed
 	
 	//compute the index
 	while (iQBoundIdx < iMaxSearchTime && iQSuccess < 3) {
@@ -92,43 +93,59 @@ void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud
 		//search distance of center of sign based on max distance to center
 
 		oLineTree.nearestKSearch(m_pControlCloud->points[iQBoundIdx], 1, vSearchIdx, vSearchDis);
-	
+
 		//if the searched point is first point, which indicates the searched point is behind the line
-		if(vSearchIdx[0]){
+		if(vSearchIdx[0] != 0 && vSearchIdx[0] != pLineCloud->points.size() - 1){
 			
 			//if this point has been computed
 			if (vLinePointStatus[vSearchIdx[0]] < 0){
-				
-			    //compute the moved location
-				pcl::PointXY oNewAncher = MovingDistance(pLineCloud->points[vSearchIdx[0]],
-					                                     m_pControlCloud->points[iQBoundIdx], fMoveDis);
 
-				//compute the anchers
-				pcl::PointXYZ oNew3DAncher;
-				oNew3DAncher.x = oNewAncher.x;
-				oNew3DAncher.y = oNewAncher.y;
-				oNew3DAncher.z = pCloud->points[vSearchIdx[0]].z;
+				//if this searched is far away from boundary
+				int iMovingIdx = oMap.AssignPointToMap(pCloud->points[vSearchIdx[0]]);
 
-				//compute the 
-				int iNewAncherIdx = oMap.AssignPointToMap(oNew3DAncher);
-			
-				//if this new point is a ground point
-				if (oMap.m_vReWardMap[iNewAncherIdx].travelable == 1){
+				int iRadius = ceil(fMoveDis / float(oMap.m_fGridSize));
+				std::vector<int> vMovingNearGrids = oMap.SearchGrids(iMovingIdx, iRadius);
+				//a flag indicates that moving this point is safe
+				bool bNonNearBoundFlag = true;
+				for (int i = 0; i != vMovingNearGrids.size(); ++i) {
+					if (oMap.m_vReWardMap[vMovingNearGrids[i]].iLabel == 1 ||
+						oMap.m_vReWardMap[vMovingNearGrids[i]].iLabel == 3) {
+						bNonNearBoundFlag = false;
+					}
+				}
+
+				//if it is far away from boundary
+				if (bNonNearBoundFlag) {
 					
+					//compute the moved location
+					pcl::PointXY oNewAncher = MovingDistance(pLineCloud->points[vSearchIdx[0]],
+						m_pControlCloud->points[iQBoundIdx], fMoveDis);
+
+					//compute the anchers
+					pcl::PointXYZ oNew3DAncher;
+					oNew3DAncher.x = oNewAncher.x;
+					oNew3DAncher.y = oNewAncher.y;
+					oNew3DAncher.z = pCloud->points[vSearchIdx[0]].z;
+					
+
+					//compute the 
+					//int iNewAncherIdx = oMap.AssignPointToMap(oNew3DAncher);
 					std::vector<int> vRadiuSIdx;
 					std::vector<float> vRadiuSDis;
-					
+
 					//kdtree search
 					oLineTree.radiusSearch(pLineCloud->points[vSearchIdx[0]], fMoveDis, vRadiuSIdx, vRadiuSDis);
-					
-					for (int i = 0; i != vRadiuSIdx.size(); ++i)
+
+					for (int i = 0; i != vRadiuSIdx.size(); ++i){
+
 						vLinePointStatus[vRadiuSIdx[i]] = iQSuccess;
-					
+						
+                    }
 					//add new data set
 					vNewAncherPoints.push_back(oNew3DAncher);
-					
-			        iQSuccess++;
-					
+
+					iQSuccess++;
+
 				}
 				
 			}//end if
@@ -167,9 +184,9 @@ void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud
 	for (int i = 0; i != vTempVec.size(); ++i) {
 	
 		pCloud->points.push_back(vTempVec[i]);
-	
+
 	}
-	
+
 }
 
 pcl::PointXY PathOptimization::MovingDistance(const pcl::PointXY & oLinePoint,

@@ -18,7 +18,9 @@ Confidence::Confidence(float f_fSigma,
 	                  float f_fVisTermThr):
 	                     m_fWeightDis(0.7),
                          m_fWeightVis(0.3),
-	                      m_fDensityR(0.3){
+	                      m_fDensityR(0.3),
+                         m_fLenWeight(0.7),
+                       m_fBoundWeight(0.3){
 
 	SetSigmaValue(f_fSigma);
 
@@ -733,9 +735,10 @@ void Confidence::DisBoundTerm(std::vector<CofidenceValue> & vReWardMap,
 	for (int i = 0; i != vNeighborGrids.size(); ++i) {
 
 		if (vReWardMap[vNeighborGrids[i]].iLabel == 2) {
-			//get maximum value of distance term
-			if (vReWardMap[vNeighborGrids[i]].disTermVal < (0.7 * vDisPartValue[i] + 0.3 * vBoundPartValue[i]) )
-				vReWardMap[vNeighborGrids[i]].disTermVal = (0.7 * vDisPartValue[i] + 0.3 * vBoundPartValue[i]) ;
+			//get maximum value of distance term  
+			
+			if (vReWardMap[vNeighborGrids[i]].disTermVal < (m_fLenWeight * vDisPartValue[i] + m_fBoundWeight * vBoundPartValue[i]) )
+				vReWardMap[vNeighborGrids[i]].disTermVal = (m_fLenWeight * vDisPartValue[i] + m_fBoundWeight * vBoundPartValue[i]) ;
 
 			  if (vReWardMap[vNeighborGrids[i]].disTermVal < vBoundPartValue[i]){
 	

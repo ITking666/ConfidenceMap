@@ -158,12 +158,12 @@ public:
 	//the number of grids in length or width
 	int m_iGridNum;
 
+	//size of each pixel in map
+	float m_fGridSize;
+
 private:
 
 	inline bool JudgeRefreshMask(const float & fRadiusGridsNum);
-
-	//size of each pixel in map
-	float m_fGridSize;
 	
 	//size of map (length of map to be scanned)
 	float m_fMapTotalLength;

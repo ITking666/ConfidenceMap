@@ -36,7 +36,7 @@ public:
 		                                 const std::vector<std::vector<int>> & vGridPointIdx,
 	                                     const int & iQueryIdx);
 
-	static bool TSP::ComputeCentersPosition(pcl::PointXYZ oCenter,
+	static bool TSP::ComputeCentersPosition(pcl::PointXYZ & oCenter,
 		const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 		const std::vector<std::vector<int>> & vGridPointIdx,
 		const int & iQueryIdx);

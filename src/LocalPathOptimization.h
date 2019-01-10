@@ -2,6 +2,11 @@
 #define LOCALPATHOPTIMIZATION_H
 #include "Confidence.h"
 #include "TSP.h"
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+
 
 struct QualityPair{
 
@@ -40,7 +45,7 @@ public:
 	////generate new local path
 	void NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 		                                            GridMap & oMap,
-		                                      float fMoveDis = 1.5,
+		                                      float fMoveDis = 1.0,
 		                                    int iMaxSearchTime = 7,
 		                                    int iMinPathLength = 5);
 

@@ -19,6 +19,7 @@
 #include <cmath>
 #include <ctime>
 #define ROBOT_HEIGHT 1.13933
+#define SCENE_RADIUS 60.0000
 
 struct ScanIndex{
 
@@ -188,7 +189,7 @@ int main() {
 	//read data
 	std::vector<std::vector<double> > vRawData;
 	//read data for data file
-	ReadMatrix("test.txt", vRawData);
+	ReadMatrix("scene4.txt", vRawData);
 	std::cout << "Reading data completed!" << std::endl;
 
 	//all point clouds
@@ -203,6 +204,7 @@ int main() {
 	pcl::PointCloud<pcl::PointXYZ>::Ptr pAllTravelCloud(new pcl::PointCloud<pcl::PointXYZ>);
 	std::vector<int> vAllTravelIdx;
 	
+	int iReadDataCount = 0;
 	//read data
 	for (size_t i = 0; i != vRawData.size(); ++i) {
 
@@ -211,26 +213,35 @@ int main() {
 		oPoint.x = vRawData[i][0];
 		oPoint.y = vRawData[i][1];
 		oPoint.z = vRawData[i][2];
-		//whole point clouds
-		pAllCloud->points.push_back(oPoint);
 
-		//each point clouds
-		vAllPointLabels.push_back(vRawData[i][3]);
-		
-		//take index for inital robot
-		if (vRawData[i][3] == 1) {//travelable part
-			pAllTravelCloud->points.push_back(oPoint);
-			vAllTravelIdx.push_back(i);
-		
-		}else if (vRawData[i][3] == 2) {//boundary part
-			pAllBoundCloud->points.push_back(oPoint);
-			vAllBoundIdx.push_back(i);
-		}
-		else {//obstacle part
-			pAllObstacleCloud->points.push_back(oPoint);
-			vAllObstacleIdx.push_back(i);
-		}
+		float fOneDis = sqrt(oPoint.x*oPoint.x 
+			               + oPoint.y*oPoint.y);
 
+		if (fOneDis <= SCENE_RADIUS){
+
+			//whole point clouds
+			pAllCloud->points.push_back(oPoint);
+
+			//each point clouds
+			vAllPointLabels.push_back(vRawData[i][3]);
+
+			//take index for inital robot
+			if (vRawData[i][3] == 1) {//travelable part
+				pAllTravelCloud->points.push_back(oPoint);
+				vAllTravelIdx.push_back(iReadDataCount);
+
+			}
+			else if (vRawData[i][3] == 2) {//boundary part
+				pAllBoundCloud->points.push_back(oPoint);
+				vAllBoundIdx.push_back(iReadDataCount);
+			}
+			else {//obstacle part
+				pAllObstacleCloud->points.push_back(oPoint);
+				vAllObstacleIdx.push_back(iReadDataCount);
+			}
+
+			iReadDataCount++;
+		}
 	}
 	
 	//view points
@@ -259,8 +270,7 @@ int main() {
 
 	Confidence oCofSolver(ROBOT_AFFECTDIS,4.2,5);
 
-	//define output
-	std::vector<pcl::PointXYZ> vAstarTrajectory;
+
 
 	//the scanning label in simulation
 	std::vector<PVGridStatus> vObstacleScan(pAllObstacleCloud->points.size());
@@ -275,7 +285,6 @@ int main() {
 	std::vector<std::vector<int>> vGVTravelPsIdx(vGridTravelPsIdx.size());
 	std::vector<std::vector<int>> vGVObsPsIdx(vGridObsPsIdx.size());
 	
-
 	//assign point to map
 	oGridMaper.AssignPointsToMap(*pAllObstacleCloud, vGridObsPsIdx, 1);
 	oGridMaper.AssignPointsToMap(*pAllTravelCloud, vGridTravelPsIdx,2);
@@ -288,12 +297,20 @@ int main() {
 	}
 	//TSP class
 	TSP OLTSPSolver;
-	Evaluation oEvaluator;
-
+	
 	int iRobotGridIdx = oGridMaper.AssignPointToMap(oRobot);
 	OLTSPSolver.GetNewNode(pAllTravelCloud, vGridTravelPsIdx, iRobotGridIdx);
 	oGridMaper.m_vReWardMap[iRobotGridIdx].travelable = 1;
 	oGridMaper.m_vReWardMap[iRobotGridIdx].iLabel = 2;
+	
+	Evaluation oEvaluator;
+	oEvaluator.ComputeGroundTruthNum(oGridMaper.m_vReWardMap);
+
+	//define output
+	std::vector<pcl::PointXYZ> vAstarTrajectory;
+	std::vector<pcl::PointXYZ> vOneLocalPath;
+	vOneLocalPath.clear();
+
 	//*************Compute the real region*************
 	//**********The initial point cloud***********
 	
@@ -302,9 +319,10 @@ int main() {
 	
 	float fTotalMovingCost = 0.0;
 
+
 	//find scanning region of each node (site)
 	//while(iLoopCount!=10 && bOverFlag){
-    while(bOverFlag && fTotalMovingCost <= 200.0){
+    while(bOverFlag && fTotalMovingCost <= 300.0){
 		//judgement
 		bOverFlag = false;
 	    //robot location
@@ -314,6 +332,11 @@ int main() {
 		   oRobot.y =  OLTSPSolver.m_vUnVisitCenters[0].y;
 		   oRobot.z =  OLTSPSolver.m_vUnVisitCenters[0].z + ROBOT_HEIGHT;
 		}
+		
+		//get the trajectory distance
+		oEvaluator.AddDistanceValue(oEvaluator.ComputeMovingDis(vOneLocalPath));
+		oEvaluator.Output(fTotalMovingCost);
+		vOneLocalPath.clear();
 		
 		//find scanning region
 	    std::vector<int> vNearbyGrids = oGridMaper.SearchGrids(iRobotGridIdx, ROBOT_AFFECTDIS/0.5);
@@ -484,7 +507,6 @@ int main() {
 			//spline optimal
 			Spline oBezierLine;
 			std::vector<std::vector<pcl::PointXYZ>> vOneBezierSpline;
-			std::vector<pcl::PointXYZ> vOneLocalPath;
 			
 
 			oBezierLine.NonSingularityBezierSplineGeneration(vOneBezierSpline, pAnchors, 0.01);
@@ -492,15 +514,16 @@ int main() {
 			std::cout << "***Compute spline success***" << std::endl;
 
 			//Evaluate the cost 
-
-			oEvaluator.AddDistanceValue(oEvaluator.ComputeMovingDis(vOneLocalPath));
-			oEvaluator.Output(fTotalMovingCost);
+		
 			std::cout << "Total moving distance: "<< fTotalMovingCost << std::endl;
 
 			for(int i = 0; i != vOneLocalPath.size(); ++i)
 				vAstarTrajectory.push_back(vOneLocalPath[i]);
 
         }//if bOverFlag
+
+		float fOneLoopCover = oEvaluator.CurrentKnownRate(oGridMaper.m_vReWardMap);
+		std::cout << "Cover Rate: " << fOneLoopCover << std::endl;
 
 	}//while
 
@@ -646,7 +669,7 @@ int main() {
 		arrowstream << i << "_" << i + 1 << "_arrow";
 		std::string arrowNumLabel;
 		arrowstream >> arrowNumLabel;
-		vAstarTrajectory[i].z = vAstarTrajectory[i].z + ROBOT_HEIGHT;
+		
 		viewer->addSphere(vAstarTrajectory[i], 0.2, float(i + 1) / float(vAstarTrajectory.size()), float(i + 1) / float(vAstarTrajectory.size()), float(i + 1) / float(vAstarTrajectory.size()), numlabel.c_str());
 		
 	}

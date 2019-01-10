@@ -58,7 +58,7 @@ pcl::PointXYZ TSP::ComputeCentersPosition(const pcl::PointCloud<pcl::PointXYZ>::
 
 }
 //reload to output a center position with a successed flag
-bool TSP::ComputeCentersPosition(pcl::PointXYZ oCenter,
+bool TSP::ComputeCentersPosition(pcl::PointXYZ & oCenter,
 	const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 	const std::vector<std::vector<int>> & vGridPointIdx,
 	const int & iQueryIdx) {
@@ -69,6 +69,10 @@ bool TSP::ComputeCentersPosition(pcl::PointXYZ oCenter,
 	oCenter.z = 0.0;
 
 	int fAllNumber = vGridPointIdx[iQueryIdx].size();
+
+	if (!fAllNumber)
+		return false;
+
 	//find each points
 	for (int j = 0; j != fAllNumber; ++j) {
 
@@ -77,9 +81,6 @@ bool TSP::ComputeCentersPosition(pcl::PointXYZ oCenter,
 		oCenter.z += pCloud->points[vGridPointIdx[iQueryIdx][j]].z;
 
 	}
-
-	if (!fAllNumber)
-		return false;
 
 	//averaging
 	oCenter.x = oCenter.x / float(fAllNumber);
