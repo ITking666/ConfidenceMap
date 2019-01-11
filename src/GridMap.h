@@ -114,6 +114,8 @@ public:
 
 	void InitializeMap();
 
+	void FiterGroundGrids(const std::vector<std::vector<int>> & vGridTravelIdx);
+
 	void GenerateMap(std::vector<std::vector<int>> & vGridPointIdx);
 
 	void RegionGrow(const std::vector<int> & vNewScannedGrids);
@@ -180,6 +182,8 @@ private:
 	float m_fMinThreshold;
 	float m_fMinRadiusNum; //searched radius
 
+
+	int m_iFilterNum;
 };
 
 

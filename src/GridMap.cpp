@@ -5,7 +5,8 @@ GridMap::GridMap(float f_fGridSize,
 	             float f_fMapTotalLength,
 	             float f_fRadius,
 	             float f_fMinThreshold)
-	            :m_fMaskFlag(0.0){
+	            :m_fMaskFlag(0.0),
+	             m_iFilterNum(100){
 
 	//set the size of map
 	SetMapSize(f_fGridSize, f_fMapTotalLength);
@@ -53,6 +54,22 @@ void GridMap::InitializeMap(){
 	m_vNormalVecMap.resize(m_iGridNum * m_iGridNum);
 	
 }
+
+void GridMap::FiterGroundGrids(const std::vector<std::vector<int>> & vGridTravelIdx){
+
+	for (int i = 0; i != m_vReWardMap.size(); ++i) {
+	
+		if (m_vReWardMap[i].iLabel == 2) {
+			if (vGridTravelIdx[i].size() < m_iFilterNum) {
+			
+				m_vReWardMap[i].iLabel = 3;
+			}
+		}
+			
+	}
+
+}
+
 
 void GridMap::GenerateMap(std::vector<std::vector<int>> & vGridPointIdx){
 

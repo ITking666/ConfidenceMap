@@ -19,7 +19,7 @@
 #include <cmath>
 #include <ctime>
 #define ROBOT_HEIGHT 1.13933
-#define SCENE_RADIUS 60.0000
+#define SCENE_RADIUS 40.0000
 
 struct ScanIndex{
 
@@ -189,7 +189,7 @@ int main() {
 	//read data
 	std::vector<std::vector<double> > vRawData;
 	//read data for data file
-	ReadMatrix("scene4.txt", vRawData);
+	ReadMatrix("scene3.txt", vRawData);
 	std::cout << "Reading data completed!" << std::endl;
 
 	//all point clouds
@@ -246,6 +246,7 @@ int main() {
 	
 	//view points
 
+
 	//**************simulated robot point*******************
 	//original view point index based on ground points
 	//int iOriViewIdx = 75000;
@@ -264,7 +265,7 @@ int main() {
 	std::vector<std::vector<int>> vGridObsPsIdx;
 
 
-	GridMap oGridMaper(0.5, 500.0, ROBOT_AFFECTDIS*0.6, 0.8);
+	GridMap oGridMaper(0.5, 500.0, ROBOT_AFFECTDIS*0.5, 0.8);
 	oGridMaper.InitializeMap();
 
 
@@ -289,6 +290,7 @@ int main() {
 	oGridMaper.AssignPointsToMap(*pAllObstacleCloud, vGridObsPsIdx, 1);
 	oGridMaper.AssignPointsToMap(*pAllTravelCloud, vGridTravelPsIdx,2);
 	oGridMaper.AssignPointsToMap(*pAllBoundCloud, vGridBoundPsIdx,3);
+	oGridMaper.FiterGroundGrids(vGridTravelPsIdx);
 
 	std::vector<std::vector<int>> vAStarMap(oGridMaper.m_iGridNum);
 	for (int i = 0; i != oGridMaper.m_iGridNum; ++i) {
@@ -305,6 +307,10 @@ int main() {
 	
 	Evaluation oEvaluator;
 	oEvaluator.ComputeGroundTruthNum(oGridMaper.m_vReWardMap);
+	//ouput file
+	std::ofstream oEvaluationFile;
+	oEvaluationFile.open("EvaluationRes.txt", std::ios::out | std::ios::app);
+
 
 	//define output
 	std::vector<pcl::PointXYZ> vAstarTrajectory;
@@ -321,8 +327,8 @@ int main() {
 
 
 	//find scanning region of each node (site)
-	//while(iLoopCount!=10 && bOverFlag){
-    while(bOverFlag && fTotalMovingCost <= 300.0){
+	// while(iLoopCount != 13 && bOverFlag && fTotalMovingCost <= 300.0){
+    while(bOverFlag){
 		//judgement
 		bOverFlag = false;
 	    //robot location
@@ -336,6 +342,11 @@ int main() {
 		//get the trajectory distance
 		oEvaluator.AddDistanceValue(oEvaluator.ComputeMovingDis(vOneLocalPath));
 		oEvaluator.Output(fTotalMovingCost);
+		//Evaluate the cost 
+
+		std::cout << "Total moving distance: " << fTotalMovingCost << std::endl;
+		oEvaluationFile << fTotalMovingCost<< " ";
+
 		vOneLocalPath.clear();
 		
 		//find scanning region
@@ -513,16 +524,13 @@ int main() {
 			oBezierLine.TransforContinuousSpline(vOneLocalPath, vOneBezierSpline);
 			std::cout << "***Compute spline success***" << std::endl;
 
-			//Evaluate the cost 
-		
-			std::cout << "Total moving distance: "<< fTotalMovingCost << std::endl;
-
 			for(int i = 0; i != vOneLocalPath.size(); ++i)
 				vAstarTrajectory.push_back(vOneLocalPath[i]);
 
         }//if bOverFlag
 
 		float fOneLoopCover = oEvaluator.CurrentKnownRate(oGridMaper.m_vReWardMap);
+		oEvaluationFile << fOneLoopCover << std::endl;
 		std::cout << "Cover Rate: " << fOneLoopCover << std::endl;
 
 	}//while
@@ -628,6 +636,8 @@ int main() {
 		//	viewer->addArrow(vAstarTrajectory[i], vAstarTrajectory[i - 1], 0.0, 0.0, 1.0, false, arrowNumLabel.c_str());
 	}
 
+	oTrajectoryFile.close();
+	oEvaluationFile.close();
 	//std::vector<int> vLabels(pAllCloud->points.size(),0);
 	//for(int i=0;i!= oGridMaper.m_vReWardMap.size();++i){
 

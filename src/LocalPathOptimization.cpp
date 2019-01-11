@@ -51,10 +51,13 @@ void PathOptimization::GetControlCenter(const pcl::PointCloud<pcl::PointXYZ>::Pt
 }
 
 void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
-	                                                              GridMap & oMap,
-	                                                              float fMoveDis,
-	                                                          int iMaxSearchTime,
-	                                                          int iMinPathLength){
+	GridMap & oMap,
+	float fMoveDis,
+	int iMaxSearchTime,
+	int iMinPathLength) {
+
+	std::ofstream oBUGFile;
+	oBUGFile.open("BugFixing.txt", std::ios::out | std::ios::app);
 
 	pcl::PointCloud<pcl::PointXY>::Ptr pLineCloud(new pcl::PointCloud<pcl::PointXY>);
 	std::vector<int> vLinePointStatus(pCloud->points.size(), -1);
@@ -72,7 +75,7 @@ void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud
 	if (pLineCloud->points.size() < iMinPathLength)
 		return;
 	//construct a kdtree
-    pcl::KdTreeFLANN<pcl::PointXY> oLineTree;
+	pcl::KdTreeFLANN<pcl::PointXY> oLineTree;
 	oLineTree.setInputCloud(pLineCloud);
 
 	//if can not constructed a tree
@@ -84,7 +87,7 @@ void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud
 
 	int iQBoundIdx = 0;
 	int iQSuccess = 0;//The successed seed
-	
+
 	//compute the index
 	while (iQBoundIdx < iMaxSearchTime && iQSuccess < 3) {
 
@@ -95,10 +98,10 @@ void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud
 		oLineTree.nearestKSearch(m_pControlCloud->points[iQBoundIdx], 1, vSearchIdx, vSearchDis);
 
 		//if the searched point is first point, which indicates the searched point is behind the line
-		if(vSearchIdx[0] != 0 && vSearchIdx[0] != pLineCloud->points.size() - 1){
-			
+		if (vSearchIdx[0] != 0 && vSearchIdx[0] != pLineCloud->points.size() - 1) {
+
 			//if this point has been computed
-			if (vLinePointStatus[vSearchIdx[0]] < 0){
+			if (vLinePointStatus[vSearchIdx[0]] < 0) {
 
 				//if this searched is far away from boundary
 				int iMovingIdx = oMap.AssignPointToMap(pCloud->points[vSearchIdx[0]]);
@@ -116,7 +119,7 @@ void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud
 
 				//if it is far away from boundary
 				if (bNonNearBoundFlag) {
-					
+
 					//compute the moved location
 					pcl::PointXY oNewAncher = MovingDistance(pLineCloud->points[vSearchIdx[0]],
 						m_pControlCloud->points[iQBoundIdx], fMoveDis);
@@ -126,7 +129,7 @@ void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud
 					oNew3DAncher.x = oNewAncher.x;
 					oNew3DAncher.y = oNewAncher.y;
 					oNew3DAncher.z = pCloud->points[vSearchIdx[0]].z;
-					
+
 
 					//compute the 
 					//int iNewAncherIdx = oMap.AssignPointToMap(oNew3DAncher);
@@ -136,24 +139,24 @@ void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud
 					//kdtree search
 					oLineTree.radiusSearch(pLineCloud->points[vSearchIdx[0]], fMoveDis, vRadiuSIdx, vRadiuSDis);
 
-					for (int i = 0; i != vRadiuSIdx.size(); ++i){
+					for (int i = 0; i != vRadiuSIdx.size(); ++i) {
 
 						vLinePointStatus[vRadiuSIdx[i]] = iQSuccess;
-						
-                    }
+
+					}
 					//add new data set
 					vNewAncherPoints.push_back(oNew3DAncher);
 
 					iQSuccess++;
 
 				}
-				
+
 			}//end if
 
 		}//if point is
-		
+
 		iQBoundIdx++;
-		
+
 	}//while
 
 	std::cout << "Control Point Success Times:  " << iQSuccess << std::endl;
@@ -169,22 +172,47 @@ void PathOptimization::NewLocalPath(pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud
 	for (int i = 0; i != vLinePointStatus.size(); ++i) {
 		//if changed
 		if (vLinePointStatus[i] < 0) {
-		
+
 			vTempVec.push_back(pCloud->points[i]);
-		
-		}else if (vLinePointStatus[i] != iLabel) {
-			
+
+		}
+		else if (vLinePointStatus[i] != iLabel) {
+
 			vTempVec.push_back(vNewAncherPoints[vLinePointStatus[i]]);
 			iLabel = vLinePointStatus[i];
 		}
-	
+
 	}
 
+	//if the output is less than 5 which is smaller or equal to the minimum input requirement of TempVec
+	while (vTempVec.size() <= 4) {
+
+		std::vector<pcl::PointXYZ> vNewTempVec;
+		for (int i = 0; i < vTempVec.size() - 1; ++i) {
+
+			pcl::PointXYZ oOnePoint;
+			oOnePoint.x = (vTempVec[i].x + vTempVec[i + 1].x)/2.0;
+			oOnePoint.y = (vTempVec[i].y + vTempVec[i + 1].y)/2.0;
+			oOnePoint.z = (vTempVec[i].z + vTempVec[i + 1].z)/2.0;
+			vNewTempVec.push_back(vTempVec[i]);
+			vNewTempVec.push_back(oOnePoint);
+		}
+		//get the last element
+		vNewTempVec.push_back(vTempVec[vTempVec.size() - 1]);
+		vTempVec.clear();
+        //turn back check whether the size meet the requirement
+		for (int i = 0; i != vNewTempVec.size(); ++i)
+			vTempVec.push_back(vNewTempVec[i]);
+		
+	}
+
+	//assigament
 	pCloud->points.clear();
 	for (int i = 0; i != vTempVec.size(); ++i) {
-	
-		pCloud->points.push_back(vTempVec[i]);
 
+		pCloud->points.push_back(vTempVec[i]);
+		oBUGFile << vTempVec[i].x << " " << vTempVec[i].y << " "
+			<< vTempVec[i].z << " " << i << std::endl;
 	}
 
 }
