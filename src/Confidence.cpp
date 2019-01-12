@@ -26,7 +26,7 @@ Confidence::Confidence(float f_fSigma,
 
 	SetVisParas(f_fGHPRParam, f_fVisTermThr);
 
-	srand((unsigned)time(NULL));
+	//srand((unsigned)time(NULL));
 
 }
 
@@ -460,6 +460,57 @@ std::vector<int>  Confidence::GetRandom(const unsigned int iSize,
 	return iRandomVec;
 
 }
+//reload
+std::vector<int> Confidence::GetRandom(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pAllTravelCloud,
+	                                                                         GridMap & oMaper,
+	                                                                    const int iSampleNums){
+	std::vector<int> vRandomVec;
+	int iSize = pAllTravelCloud->points.size();
+	//define output vector
+	std::vector<int> vAllValueVec(pAllTravelCloud->points.size(), 0);
+
+	//get all of value
+	for (int i = 0; i != iSize; ++i)
+		vAllValueVec[i] = i;
+
+	//if the sampling number is larger than the size of total number
+	if (iSize <= iSampleNums) {
+
+		return vAllValueVec;
+
+	}
+
+	//the last number
+	int iLastIdx = iSize - 1;
+	int iCurSampNum = 0;
+
+	//get the random value
+	while (iSampleNums - iCurSampNum) {
+
+		//defend repeat selection
+		int iRandomRes = (rand() % (iLastIdx - iCurSampNum + 1));
+
+		int iRandomGrid = oMaper.AssignPointToMap(pAllTravelCloud->points[iRandomRes]);
+
+		if (oMaper.m_vReWardMap[iRandomGrid].iLabel == 2) {
+			//exchange the last one of unselected value and current randon selected value
+			int iTempValue = vAllValueVec[iRandomRes];
+			vAllValueVec[iRandomRes] = vAllValueVec[iLastIdx - iCurSampNum];
+			vAllValueVec[iLastIdx - iCurSampNum] = iTempValue;
+			//save the result
+			vRandomVec.push_back(iRandomRes);
+		//count
+		iCurSampNum++;
+        }
+
+	}//while
+
+	//over
+	return vRandomVec;
+
+}
+
+
 
 /*************************************************
 Function: ComputeEuclideanDis

@@ -81,6 +81,9 @@ public:
 	//get random value
 	inline std::vector<int> GetRandom(const unsigned int iSize,
 		                                 const int iSampleNums);
+	static std::vector<int> GetRandom(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pAllTravelCloud,
+		                                                                 GridMap & oMaper,
+		                                                              const int iSampleNums);
 
 	//Compute Euclidean distance
 	static float ComputeEuclideanDis(pcl::PointXYZ & oQueryPoint, 

@@ -245,19 +245,7 @@ int main() {
 	}
 	
 	//view points
-
-
-	//**************simulated robot point*******************
-	//original view point index based on ground points
-	//int iOriViewIdx = 75000;
-	//original robot position
-	pcl::PointXYZ oRobot;
-	//oRobot.x = pAllTravelCloud->points[iOriViewIdx].x;
-	//oRobot.y = pAllTravelCloud->points[iOriViewIdx].y;
-	//oRobot.z = pAllTravelCloud->points[iOriViewIdx].z + ROBOT_HEIGHT;
-	oRobot.x = 0.0;
-	oRobot.y = 0.0;
-	oRobot.z = ROBOT_HEIGHT;
+	srand((unsigned)time(NULL));
 
 	//***************generate the grid map for point clouds***********
 	std::vector<std::vector<int>> vGridBoundPsIdx;
@@ -270,8 +258,6 @@ int main() {
 
 
 	Confidence oCofSolver(ROBOT_AFFECTDIS,4.2,5);
-
-
 
 	//the scanning label in simulation
 	std::vector<PVGridStatus> vObstacleScan(pAllObstacleCloud->points.size());
@@ -300,7 +286,28 @@ int main() {
 	//TSP class
 	TSP OLTSPSolver;
 	
-	int iRobotGridIdx = oGridMaper.AssignPointToMap(oRobot);
+
+	//**************simulated robot point*******************
+	//original view point index based on ground points
+	//int iOriViewIdx = 75000;
+	//original robot position
+	pcl::PointXYZ oRobot;
+	oRobot.x = 0.0;
+	oRobot.y = 0.0;
+	oRobot.z = 0.0 + ROBOT_HEIGHT;
+
+	int iRobotGridIdx;
+	//std::vector<int> vOriginSites = Confidence::GetRandom(pAllTravelCloud, oGridMaper,10);
+	//for (int i = 0; i != vOriginSites.size(); ++i) {
+	//	std::cout << "Seed robot: " << i << "_: " << vOriginSites[i] << std::endl;
+	//}
+
+	int iOriViewIdx = 22541;
+	//oRobot.x = pAllTravelCloud->points[iOriViewIdx].x;
+	//oRobot.y = pAllTravelCloud->points[iOriViewIdx].y;
+	//oRobot.z = pAllTravelCloud->points[iOriViewIdx].z + ROBOT_HEIGHT;
+	iRobotGridIdx = oGridMaper.AssignPointToMap(oRobot);
+
 	OLTSPSolver.GetNewNode(pAllTravelCloud, vGridTravelPsIdx, iRobotGridIdx);
 	oGridMaper.m_vReWardMap[iRobotGridIdx].travelable = 1;
 	oGridMaper.m_vReWardMap[iRobotGridIdx].iLabel = 2;
@@ -325,10 +332,9 @@ int main() {
 	
 	float fTotalMovingCost = 0.0;
 
-
 	//find scanning region of each node (site)
 	// while(iLoopCount != 13 && bOverFlag && fTotalMovingCost <= 300.0){
-    while(bOverFlag){
+    while(iLoopCount != 1 && bOverFlag && fTotalMovingCost <= 300.0){
 		//judgement
 		bOverFlag = false;
 	    //robot location
@@ -633,7 +639,7 @@ int main() {
 			            << vAstarTrajectory[i].z << " " 
 		              	<< i << " " << std::endl;
 		//if (i)
-		//	viewer->addArrow(vAstarTrajectory[i], vAstarTrajectory[i - 1], 0.0, 0.0, 1.0, false, arrowNumLabel.c_str());
+			//viewer->addArrow(vAstarTrajectory[i], vAstarTrajectory[i - 1], 0.0, 0.0, 1.0, false, arrowNumLabel.c_str());
 	}
 
 	oTrajectoryFile.close();
@@ -671,6 +677,7 @@ int main() {
 	
 	//add simulated robot point for display
 	for (int i = 0; i < vAstarTrajectory.size(); i = i + 20) {
+
 		stringstream viewpointstream;
 		viewpointstream << i << "th_view";
 		std::string numlabel;
@@ -681,9 +688,11 @@ int main() {
 		arrowstream >> arrowNumLabel;
 		
 		viewer->addSphere(vAstarTrajectory[i], 0.2, float(i + 1) / float(vAstarTrajectory.size()), float(i + 1) / float(vAstarTrajectory.size()), float(i + 1) / float(vAstarTrajectory.size()), numlabel.c_str());
-		
+		//viewer->addSphere(vAstarTrajectory[i], 0.2, 1.0, 1.0, 0.0, numlabel.c_str());
+
 	}
 
+	//viewer->addSphere(oRobot, 0.25, 1.0, 1.0, 0.0, "robot");
 	for (int i = 0; i != vUnVisitedView.size(); ++i) {
 		stringstream unviewpointstream;
 		unviewpointstream << i << "th_UnvisitedView";
@@ -696,7 +705,7 @@ int main() {
 		unarrowstream >> unArrowNumLabel;
 
 		vUnVisitedView[i].z = vUnVisitedView[i].z + ROBOT_HEIGHT;
-		viewer->addSphere(vUnVisitedView[i], 0.1, 1.0, 0.0, 0.0, unviewpointnumlabel.c_str());
+		viewer->addSphere(vUnVisitedView[i], 0.25, 1.0, 0.0, 1.0, unviewpointnumlabel.c_str());
 		if (i)
 			viewer->addArrow(vUnVisitedView[i], vUnVisitedView[i - 1], 1.0, 0.0, 0.0, false, unArrowNumLabel.c_str());
 		else
