@@ -206,7 +206,7 @@ float BranchBound::SolveOP(std::vector<int> & vResTour){
 	//set as a vector starting from 0
 	//each element need to mins 1
 	//output without the frist element
-	for (int i = 1; i != iNodeNum + 1; ++i)
+	for (int i = 1; i < iNodeNum + 1; ++i)
 		vResTour.push_back(bestTour[i] - 1);
 
 	delete[] bestTour;

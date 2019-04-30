@@ -365,7 +365,7 @@ int main() {
 	//oRobot.z = pAllTravelCloud->points[iOriViewIdx].z + ROBOT_HEIGHT;
 	iRobotGridIdx = oGridMaper.AssignPointToMap(oRobot);
 
-	OLTSPSolver.GetNewNode(pAllTravelCloud, vGridTravelPsIdx, iRobotGridIdx);
+	OLTSPSolver.GetNewNode(oGridMaper.m_vReWardMap,pAllTravelCloud, vGridTravelPsIdx, iRobotGridIdx);
 	oGridMaper.m_vReWardMap[iRobotGridIdx].travelable = 1;
 	oGridMaper.m_vReWardMap[iRobotGridIdx].iLabel = 2;
 	
@@ -521,9 +521,12 @@ int main() {
 		
 		//OLTSP calculation
 		OLTSPSolver.GetCurrentLocation(pAllTravelCloud, vGVTravelPsIdx, iRobotGridIdx);
-		OLTSPSolver.GetNewNodes(pAllTravelCloud, vGVTravelPsIdx, vNodeGridIdxs);
-		//OLTSPSolver.GTR(oGridMaper.m_vReWardMap);
-		OLTSPSolver.BranchBoundMethod(oGridMaper.m_vReWardMap);
+		OLTSPSolver.GetNewNodes(oGridMaper.m_vReWardMap, pAllTravelCloud, vGVTravelPsIdx, vNodeGridIdxs);
+
+		if(OLTSPSolver.RefreshNodes(oGridMaper.m_vReWardMap))
+			OLTSPSolver.BranchBoundMethod(oGridMaper.m_vReWardMap);
+		else
+			OLTSPSolver.GTR(oGridMaper.m_vReWardMap);
 
 		iLoopCount = iLoopCount + 1;
 		std::cout << "loops " << iLoopCount << std::endl;

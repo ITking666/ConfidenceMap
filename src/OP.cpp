@@ -2,7 +2,8 @@
 
 //5 is a placeholder
 //it will be changed when using ObjectiveMatrix
-OP::OP():BBSolver(5){
+OP::OP():BBSolver(5),
+         m_fWideThr(0.5){
 
 
 
@@ -106,7 +107,8 @@ float OP::ComputeEuclideanDis(const pcl::PointXYZ & oQueryPoint,
 
 
 
-void OP::GetNewNode(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
+void OP::GetNewNode(const std::vector<CofidenceValue> & vReWardMap,
+	                 const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 	                 const std::vector<std::vector<int>> & vGridPointIdx,
 	                 const int & vNewNodeIdxs,
 					 float fSuppressionR){
@@ -131,13 +133,19 @@ void OP::GetNewNode(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 	   m_vUnVisitNodeIdx.push_back(vNewNodeIdxs);
 	   //ger the center position of new node
 	   m_vUnVisitCenters.push_back(oCenterPoint);
+
+	   if (vReWardMap[vNewNodeIdxs].boundary > m_fWideThr)
+		   m_vUnVisitedWide.push_back(true);
+	   else
+		   m_vUnVisitedWide.push_back(false);
 	}
 
 }
 
 
 
-void OP::GetNewNodes(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
+void OP::GetNewNodes(const std::vector<CofidenceValue> & vReWardMap,
+	                 const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 	                  const std::vector<std::vector<int>> & vGridPointIdx,
 	                  const std::vector<int> & vNewNodeIdxs,
 					  float fSuppressionR){
@@ -166,11 +174,16 @@ void OP::GetNewNodes(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 		     oUnVisitKDTree.nearestKSearch(oCenterPoint, 1, vSearchedIdx, vSearchedDis);
 
 			 //if they are far away (the distance farther than threshold)
-			 if(vSearchedDis[0] > fSuppressionR){
+			 if(sqrt(vSearchedDis[0]) > fSuppressionR){
 		        //get the grid idx of new node
 		        m_vUnVisitNodeIdx.push_back(vNewNodeIdxs[i]);
 		        //ger the center position of new node
 		        m_vUnVisitCenters.push_back(oCenterPoint);
+
+				if (vReWardMap[vNewNodeIdxs[i]].boundary > m_fWideThr)
+					m_vUnVisitedWide.push_back(true);
+				else
+					m_vUnVisitedWide.push_back(false);
 			 }//end if
 
 		 }//end for int i = 0; i != vNewNodeIdxs.size(); ++i)
@@ -187,6 +200,11 @@ void OP::GetNewNodes(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 		    m_vUnVisitNodeIdx.push_back(vNewNodeIdxs[i]);
 		    //get the center position of new node
 		    m_vUnVisitCenters.push_back(oCenterPoint);
+
+			if (vReWardMap[vNewNodeIdxs[i]].boundary > m_fWideThr)
+				m_vUnVisitedWide.push_back(true);
+			else
+				m_vUnVisitedWide.push_back(false);
 	
 	    }//end for int i = 0; i != vNewNodeIdxs.size()
 
@@ -194,6 +212,69 @@ void OP::GetNewNodes(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 
 }
 
+//refresh the nodes
+bool OP::RefreshNodes(std::vector<CofidenceValue> & vReWardMap,
+	                                       float fMinThreshold){
+
+	//a status indicating whether the node is removed or not
+	std::vector<bool> vStatus(m_vUnVisitNodeIdx.size(),true);
+	for (int i = 0; i != m_vUnVisitNodeIdx.size(); ++i) {
+		if(vReWardMap[m_vUnVisitNodeIdx[i]].totalValue > fMinThreshold)
+			vStatus[i] = false;
+	}
+
+	//remain the current goal
+	//the current goal will be removed in node strategy function
+	if(m_vUnVisitNodeIdx.size())
+		vStatus[0] = true;
+
+	//new plan of nodes
+	std::vector<int> vNewPlan;
+	std::vector<pcl::PointXYZ> vNewPlanCenters;
+	std::vector<bool> vNewPlanWides;
+	for (int i = 0; i != vStatus.size(); ++i) {
+		if (vStatus[i]){
+			//save the selected one
+			vNewPlan.push_back(m_vUnVisitNodeIdx[i]);
+			vNewPlanCenters.push_back(m_vUnVisitCenters[i]);
+			vNewPlanWides.push_back(m_vUnVisitedWide[i]);
+		}
+	}
+
+	//clear old unvisted node
+	m_vUnVisitNodeIdx.clear();
+	m_vUnVisitCenters.clear();
+	m_vUnVisitedWide.clear();
+	m_vUnVisitNodeIdx.resize(vNewPlan.size());
+	m_vUnVisitCenters.resize(vNewPlanCenters.size());
+	m_vUnVisitedWide.resize(vNewPlanWides.size());
+	//save new unvisited node
+	//the traversing order is based on the serial number
+	for (int i = 0; i != vNewPlan.size(); ++i) {
+		m_vUnVisitNodeIdx[i] = vNewPlan[i];
+		m_vUnVisitCenters[i] = vNewPlanCenters[i];
+		m_vUnVisitedWide[i] = vNewPlanWides[i];
+	}
+
+
+	//wide node number
+	int iNoWideNum = 0;
+	//check whether there is still node in wide area
+	//start from the next view point
+	for (int i = 1; i < m_vUnVisitedWide.size(); ++i) {
+		//if the node area is wide and it still need to be explored
+		if (!m_vUnVisitedWide[i])
+			iNoWideNum++;
+	}
+
+	//if there is still wide area
+	std::cout << "remain nowide node num: " << iNoWideNum << std::endl;
+	if (iNoWideNum)
+		return false;
+	else
+		return true;
+
+}
 
 
 float OP::CostFunction(const std::vector<CofidenceValue> & vReWardMap,
@@ -249,6 +330,7 @@ bool OP::GTR(const std::vector<CofidenceValue> & vReWardMap) {
 	//new plan of nodes
 	std::vector<int> vNewPlan;
 	std::vector<pcl::PointXYZ> vNewPlanCenters;
+	std::vector<bool> vNewPlanWides;
 
 	//if the robot successfully reached target node
 	if (m_iCurrentNodeIdx == m_vUnVisitNodeIdx[0])
@@ -310,6 +392,7 @@ bool OP::GTR(const std::vector<CofidenceValue> & vReWardMap) {
 	    //save the selected one
 	    vNewPlan.push_back(iQueryIdx);
 	    vNewPlanCenters.push_back(oQueryCenter);
+		vNewPlanWides.push_back(m_vUnVisitedWide[iMinIdx]);
 
 		//label the selected node in unvisited nodes
 	    vUnVisitedStatus[iMinIdx] = false;
@@ -321,14 +404,17 @@ bool OP::GTR(const std::vector<CofidenceValue> & vReWardMap) {
 	//clear old unvisted node
 	m_vUnVisitNodeIdx.clear();
 	m_vUnVisitCenters.clear();
+	m_vUnVisitedWide.clear();
 	m_vUnVisitNodeIdx.resize(vNewPlan.size());
 	m_vUnVisitCenters.resize(vNewPlanCenters.size());
+	m_vUnVisitedWide.resize(vNewPlanWides.size());
 	//save new unvisited node
 	//the traversing order is based on the serial number
 	
 	for (int i = 0; i != vNewPlan.size(); ++i){
 		m_vUnVisitNodeIdx[i] = vNewPlan[i];
 		m_vUnVisitCenters[i] = vNewPlanCenters[i];
+		m_vUnVisitedWide[i] = vNewPlanWides[i];
 	}
 
 	return false;
@@ -395,6 +481,7 @@ bool OP::BranchBoundMethod(const std::vector<CofidenceValue> & vReWardMap) {
 	//new plan of nodes
 	std::vector<int> vNewPlan;
 	std::vector<pcl::PointXYZ> vNewPlanCenters;
+	std::vector<bool> vNewPlanWides;
 	
 	for (int i = 1; i != vResTour.size(); ++i) {//start from 1
 	
@@ -406,21 +493,26 @@ bool OP::BranchBoundMethod(const std::vector<CofidenceValue> & vReWardMap) {
 		//save the selected one
 		vNewPlan.push_back(iNodeIdx);
 		vNewPlanCenters.push_back(oNodeCenter);
+		vNewPlanWides.push_back(m_vUnVisitedWide[iBBNodeidx]);
 
-		std::cout << iNodeIdx << "->" << std::endl;
+		std::cout << iNodeIdx << " with "<<vReWardMap[iNodeIdx].boundary << " -> " << std::endl;
 	}
+
 	std::cout << std::endl;
 	 //clear old unvisted node
 	m_vUnVisitNodeIdx.clear();
 	m_vUnVisitCenters.clear();
+	m_vUnVisitedWide.clear();
 	m_vUnVisitNodeIdx.resize(vNewPlan.size());
 	m_vUnVisitCenters.resize(vNewPlanCenters.size());
+	m_vUnVisitedWide.resize(vNewPlanWides.size());
 	//save new unvisited node
 	//the traversing order is based on the serial number
 	//new plan of nodes
 	for (int i = 0; i != vNewPlan.size(); ++i) {
 		m_vUnVisitNodeIdx[i] = vNewPlan[i];
 		m_vUnVisitCenters[i] = vNewPlanCenters[i];
+		m_vUnVisitedWide[i] = vNewPlanWides[i];
 	}
 
 	return false;

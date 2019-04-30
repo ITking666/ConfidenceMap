@@ -17,16 +17,21 @@ public:
 		                    const int & iRobot);
 
 	//get the newly generated nodes
-	void GetNewNode(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
+	void GetNewNode(const std::vector<CofidenceValue> & vReWardMap,
+		            const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 	             	const std::vector<std::vector<int>> & vGridPointIdx,
 	            	const int & vNewNodeIdxs,
 					float fSuppressionR = 5.0);
 
 	//get the newly generated nodes
-	void GetNewNodes(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
+	void GetNewNodes(const std::vector<CofidenceValue> & vReWardMap,
+		             const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 		             const std::vector<std::vector<int>> & vGridPointIdx,
 		             const std::vector<int> & vNewNodeIdxs,
 					 float fSuppressionR = 5.0);
+
+	bool RefreshNodes(std::vector<CofidenceValue> & vReWardMap, 
+		                            float fMinThreshold = 0.8);
 
 	//get the current node index
 	void GetCurNodesIdx(int f_iRbtPstion);
@@ -76,6 +81,8 @@ public:
 
 	//unvisited nodes or nodes to be visited
 	std::vector<int> m_vUnVisitNodeIdx;
+	std::vector<bool> m_vUnVisitedWide;
+
     //the corresponding center position of unvisited nodes
 	std::vector<pcl::PointXYZ> m_vUnVisitCenters;
 
@@ -91,6 +98,8 @@ private:
 
 	//
 	BranchBound BBSolver;
+
+	float m_fWideThr;
 
 };
 

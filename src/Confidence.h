@@ -98,19 +98,20 @@ public:
 		const std::vector<std::vector<int>> & vGridTravelPsIdx);
 
 	void DisBoundTerm(std::vector<CofidenceValue> & vReWardMap,
-		                                                 const pcl::PointXYZ & oRobotPoint,
-		                                           const std::vector<int> & vNeighborGrids,
-		                                                  const PCLCloudXYZ & vTravelCloud,
-		                            const std::vector<std::vector<int>> & vGridTravelPsIdx,
-		                                                   const PCLCloudXYZ & vBoundCloud,
-		                             const std::vector<std::vector<int>> & vGridBoundPsIdx);
+		                     const pcl::PointXYZ & oRobotPoint,
+		               const std::vector<int> & vNeighborGrids,
+		                      const PCLCloudXYZ & vTravelCloud,
+		const std::vector<std::vector<int>> & vGridTravelPsIdx,
+		                       const PCLCloudXYZ & vBoundCloud,
+		 const std::vector<std::vector<int>> & vGridBoundPsIdx);
+
 	//2. quality term of confidence map
 	//void QualityTermUsingDensity(std::vector<CofidenceValue> & vReWardMap,
-	//	                          const std::vector<int> & vNeighborGrids,
-	//	                                 const PCLCloudXYZ & vTravelCloud,
+	//	                            const std::vector<int> & vNeighborGrids,
+	//	                                   const PCLCloudXYZ & vTravelCloud,
 	//               const std::vector<std::vector<int>> & vGridTravelPsIdx,
-	//	                               const PCLCloudXYZ & vAllBoundCloud,
-	//	            const std::vector<std::vector<int>> & vGridBoundPsIdx,
+	//	                                 const PCLCloudXYZ & vAllBoundCloud,
+	//	              const std::vector<std::vector<int>> & vGridBoundPsIdx,
 	//	                               const PCLCloudXYZ & vObstacleCloud,
 	//	              const std::vector<std::vector<int>> & vGridObsPsIdx);
 

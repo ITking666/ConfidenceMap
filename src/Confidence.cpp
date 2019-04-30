@@ -19,8 +19,8 @@ Confidence::Confidence(float f_fSigma,
 	                     m_fWeightDis(0.7),
                          m_fWeightVis(0.3),
 	                      m_fDensityR(0.3),
-                         m_fLenWeight(0.5),
-                       m_fBoundWeight(0.5){
+                         m_fLenWeight(0.3),
+                       m_fBoundWeight(0.7){
 
 	SetSigmaValue(f_fSigma);
 
@@ -677,12 +677,12 @@ void Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWardMap,
 
 
 void Confidence::DisBoundTerm(std::vector<CofidenceValue> & vReWardMap,
-	                                         const pcl::PointXYZ & oRobotPoint,
-	                                   const std::vector<int> & vNeighborGrids,
-	                                          const PCLCloudXYZ & vTravelCloud,
-	                    const std::vector<std::vector<int>> & vGridTravelPsIdx,
-	                                           const PCLCloudXYZ & vBoundCloud,
-	                     const std::vector<std::vector<int>> & vGridBoundPsIdx){
+	                                 const pcl::PointXYZ & oRobotPoint,
+	                           const std::vector<int> & vNeighborGrids,
+	                                  const PCLCloudXYZ & vTravelCloud,
+	            const std::vector<std::vector<int>> & vGridTravelPsIdx,
+	                                   const PCLCloudXYZ & vBoundCloud,
+	             const std::vector<std::vector<int>> & vGridBoundPsIdx){
 
 	//**********Measurement item************
 	//intermediate variables
@@ -787,13 +787,12 @@ void Confidence::DisBoundTerm(std::vector<CofidenceValue> & vReWardMap,
 
 		if (vReWardMap[vNeighborGrids[i]].iLabel == 2) {
 			//get maximum value of distance term  
-			
-			if (vReWardMap[vNeighborGrids[i]].disTermVal < (m_fLenWeight * vDisPartValue[i] + m_fBoundWeight * vBoundPartValue[i]) )
-				vReWardMap[vNeighborGrids[i]].disTermVal = (m_fLenWeight * vDisPartValue[i] + m_fBoundWeight * vBoundPartValue[i]) ;
 
-			  if (vReWardMap[vNeighborGrids[i]].disTermVal < vBoundPartValue[i]){
-	
-					vReWardMap[vNeighborGrids[i]].disTermVal = vBoundPartValue[i];}
+			if (vReWardMap[vNeighborGrids[i]].disTermVal < (m_fLenWeight * vDisPartValue[i] + m_fBoundWeight * vBoundPartValue[i]))
+				vReWardMap[vNeighborGrids[i]].disTermVal = (m_fLenWeight * vDisPartValue[i] + m_fBoundWeight * vBoundPartValue[i]);
+			//record boundary grids
+			if (vReWardMap[vNeighborGrids[i]].boundary < vBoundPartValue[i])
+				vReWardMap[vNeighborGrids[i]].boundary = vBoundPartValue[i];
 		}
 
 	}
