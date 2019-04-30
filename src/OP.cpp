@@ -1,18 +1,20 @@
-#include "TSP.h"
+#include "OP.h"
 
-TSP::TSP(){
+//5 is a placeholder
+//it will be changed when using ObjectiveMatrix
+OP::OP():BBSolver(5){
 
-
-
-}
-
-
-TSP::~TSP(){
 
 
 }
 
-void TSP::GetCurrentLocation(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
+
+OP::~OP(){
+
+
+}
+
+void OP::GetCurrentLocation(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 	                         const std::vector<std::vector<int>> & vGridPointIdx,
 	                         const int & iRobot){
 
@@ -21,7 +23,7 @@ void TSP::GetCurrentLocation(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 	m_oCurrentCenter = ComputeCentersPosition(pCloud, vGridPointIdx, iRobot);
 }
 
-void TSP::GetCurNodesIdx(int f_iRbtPstion) {
+void OP::GetCurNodesIdx(int f_iRbtPstion) {
 
 	//get the grid at which the robot is
 	m_iCurrentNodeIdx = f_iRbtPstion;
@@ -29,7 +31,7 @@ void TSP::GetCurNodesIdx(int f_iRbtPstion) {
 }
 
 
-pcl::PointXYZ TSP::ComputeCentersPosition(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
+pcl::PointXYZ OP::ComputeCentersPosition(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 	const std::vector<std::vector<int>> & vGridPointIdx,
 	const int & iQueryIdx) {
 
@@ -58,7 +60,7 @@ pcl::PointXYZ TSP::ComputeCentersPosition(const pcl::PointCloud<pcl::PointXYZ>::
 
 }
 //reload to output a center position with a successed flag
-bool TSP::ComputeCentersPosition(pcl::PointXYZ & oCenter,
+bool OP::ComputeCentersPosition(pcl::PointXYZ & oCenter,
 	const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 	const std::vector<std::vector<int>> & vGridPointIdx,
 	const int & iQueryIdx) {
@@ -92,7 +94,7 @@ bool TSP::ComputeCentersPosition(pcl::PointXYZ & oCenter,
 }
 
 
-float TSP::ComputeEuclideanDis(const pcl::PointXYZ & oQueryPoint,
+float OP::ComputeEuclideanDis(const pcl::PointXYZ & oQueryPoint,
 	                           const pcl::PointXYZ & oTargetPoint) {
 
 	//compute the eucliden distance between the query point (robot) and target point (scanned point)
@@ -104,7 +106,7 @@ float TSP::ComputeEuclideanDis(const pcl::PointXYZ & oQueryPoint,
 
 
 
-void TSP::GetNewNode(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
+void OP::GetNewNode(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 	                 const std::vector<std::vector<int>> & vGridPointIdx,
 	                 const int & vNewNodeIdxs,
 					 float fSuppressionR){
@@ -135,7 +137,7 @@ void TSP::GetNewNode(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 
 
 
-void TSP::GetNewNodes(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
+void OP::GetNewNodes(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 	                  const std::vector<std::vector<int>> & vGridPointIdx,
 	                  const std::vector<int> & vNewNodeIdxs,
 					  float fSuppressionR){
@@ -194,7 +196,7 @@ void TSP::GetNewNodes(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 
 
 
-float TSP::CostFunction(const std::vector<CofidenceValue> & vReWardMap,
+float OP::CostFunction(const std::vector<CofidenceValue> & vReWardMap,
 	      const int & vQueryIdx,
 	      const pcl::PointXYZ & oQueryCenter,
 	      const int & vTargetIdx,
@@ -212,7 +214,28 @@ float TSP::CostFunction(const std::vector<CofidenceValue> & vReWardMap,
 }
 
 
-bool TSP::GTR(const std::vector<CofidenceValue> & vReWardMap) {
+float OP::ObjectiveFunction(const std::vector<CofidenceValue> & vReWardMap,
+	                    const int & vQueryIdx,
+	                    const pcl::PointXYZ & oQueryCenter,
+	                    const int & vTargetIdx,
+	                    const pcl::PointXYZ & oTargetCenter) {
+
+	//define 
+	//compute the final cost based on the cost and reward
+	float fFinalCost = ComputeEuclideanDis(oQueryCenter, oTargetCenter);
+
+	float fFinalReward = 1.0 - vReWardMap[vTargetIdx].totalValue;
+	
+	float fObjectVal = FLT_MAX;
+	if (fFinalReward > 0.0)
+		fObjectVal = fFinalCost / fFinalReward;
+
+	//return result
+	return fObjectVal;
+
+}
+
+bool OP::GTR(const std::vector<CofidenceValue> & vReWardMap) {
 
 	//it is true if the unvisited nodes has not been selected 
 	std::vector<bool> vUnVisitedStatus(m_vUnVisitNodeIdx.size(), true);
@@ -313,8 +336,99 @@ bool TSP::GTR(const std::vector<CofidenceValue> & vReWardMap) {
 }
 
 
+bool OP::BranchBoundMethod(const std::vector<CofidenceValue> & vReWardMap) {
 
-void TSP::OutputVisitedNodes(std::vector<int> & vOutputNodes){
+	//the current robot position is the first query index
+	int iQueryIdx = m_iCurrentNodeIdx;
+	std::cout << "now the robot is at " << m_iCurrentNodeIdx << std::endl;
+	pcl::PointXYZ oQueryCenter = m_oCurrentCenter;
+
+	//if the robot successfully reached target node
+	if (m_iCurrentNodeIdx == m_vUnVisitNodeIdx[0]){
+		m_vVisitedNodeIdx.push_back(m_vUnVisitNodeIdx[0]);
+	}else {
+		m_vVisitedNodeIdx.push_back(m_iCurrentNodeIdx);
+		m_vUnVisitNodeIdx[0] = m_iCurrentNodeIdx;
+		m_vUnVisitCenters[0] = oQueryCenter;
+	}
+	
+
+	//define output
+	//if there are not any new nodes shoule be invoked
+	if (m_vUnVisitNodeIdx.size() <= 1) {
+		m_vUnVisitNodeIdx.clear();
+		m_vUnVisitCenters.clear();
+		return true;
+	}
+
+	//effective matrix
+	std::vector<std::vector<float>> vEffectMatrix;
+	std::vector<float> vArray(m_vUnVisitNodeIdx.size(), 0.0);
+	for (int i = 0; i != m_vUnVisitNodeIdx.size(); ++i) {
+		vEffectMatrix.push_back(vArray);
+	}
+	
+	//unvisited node
+	for (int i = 0; i != m_vUnVisitNodeIdx.size(); ++i) {
+		int iSourceIdx = m_vUnVisitNodeIdx[i];
+		pcl::PointXYZ oSourceCenter = m_vUnVisitCenters[i];
+
+		for(int j = 0; j != m_vUnVisitNodeIdx.size(); ++j) {
+			
+			//compute the real cost using the given cost function
+			int iTargetIdx = m_vUnVisitNodeIdx[j];
+			pcl::PointXYZ oTargetCenter = m_vUnVisitCenters[j];
+
+			//cost function which considers the reward and cost of node
+			vEffectMatrix[i][j] = ObjectiveFunction(vReWardMap, iSourceIdx, oSourceCenter,
+				                                                iTargetIdx, oTargetCenter);
+		}//end if(vUnVisitedStatus[i])
+	}
+	std::cout << std::endl;
+
+	BBSolver.ObjectiveMatrix(vEffectMatrix);
+	std::vector<int> vResTour;
+	//output without the frist element, the frist one of output is the goal(next best node)
+	float bestCost = BBSolver.SolveOP(vResTour);  //起点定为1，从第二层开始  
+	std::cout << "best cost is " << bestCost << std::endl;
+
+	//new plan of nodes
+	std::vector<int> vNewPlan;
+	std::vector<pcl::PointXYZ> vNewPlanCenters;
+	
+	for (int i = 1; i != vResTour.size(); ++i) {//start from 1
+	
+		int iBBNodeidx = vResTour[i];//note that bb node is beginning from 1 
+		//find the real index in unvisited nodes
+		int iNodeIdx = m_vUnVisitNodeIdx[iBBNodeidx];
+	    pcl::PointXYZ oNodeCenter = m_vUnVisitCenters[iBBNodeidx];
+
+		//save the selected one
+		vNewPlan.push_back(iNodeIdx);
+		vNewPlanCenters.push_back(oNodeCenter);
+
+		std::cout << iNodeIdx << "->" << std::endl;
+	}
+	std::cout << std::endl;
+	 //clear old unvisted node
+	m_vUnVisitNodeIdx.clear();
+	m_vUnVisitCenters.clear();
+	m_vUnVisitNodeIdx.resize(vNewPlan.size());
+	m_vUnVisitCenters.resize(vNewPlanCenters.size());
+	//save new unvisited node
+	//the traversing order is based on the serial number
+	//new plan of nodes
+	for (int i = 0; i != vNewPlan.size(); ++i) {
+		m_vUnVisitNodeIdx[i] = vNewPlan[i];
+		m_vUnVisitCenters[i] = vNewPlanCenters[i];
+	}
+
+	return false;
+
+}
+
+
+void OP::OutputVisitedNodes(std::vector<int> & vOutputNodes){
 
 	vOutputNodes.clear();
 	vOutputNodes.resize(m_vVisitedNodeIdx.size());
@@ -326,7 +440,7 @@ void TSP::OutputVisitedNodes(std::vector<int> & vOutputNodes){
 
 }
 
-int TSP::OutputVisitedNodes(std::vector<pcl::PointXYZ> & vOutputNodes,
+int OP::OutputVisitedNodes(std::vector<pcl::PointXYZ> & vOutputNodes,
 	const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 	const std::vector<std::vector<int>> & vGridPointIdx){
 
@@ -347,7 +461,7 @@ int TSP::OutputVisitedNodes(std::vector<pcl::PointXYZ> & vOutputNodes,
 
 }
 
-void TSP::OutputUnVisitedNodes(std::vector<int> & vOutputNodes){
+void OP::OutputUnVisitedNodes(std::vector<int> & vOutputNodes){
 
 	vOutputNodes.clear();
 	vOutputNodes.resize(m_vUnVisitNodeIdx.size());
@@ -360,7 +474,7 @@ void TSP::OutputUnVisitedNodes(std::vector<int> & vOutputNodes){
 }
 
 
-void TSP::OutputUnVisitedNodes(std::vector<pcl::PointXYZ> & vOutputNodes){
+void OP::OutputUnVisitedNodes(std::vector<pcl::PointXYZ> & vOutputNodes){
 
 	vOutputNodes.clear();
 	vOutputNodes.reserve(m_vUnVisitCenters.size());

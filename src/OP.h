@@ -1,15 +1,15 @@
 #ifndef TSP_H
 #define TSP_H
-#include "GridMap.h"
+#include "BranchBound.h"
 
-class TSP{
+class OP{
 
 
 public:
 	//constructor
-	TSP();
+	OP();
 	//destructor
-	~TSP();
+	~OP();
 
 	//get the current location of robot
 	void GetCurrentLocation(const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
@@ -36,7 +36,7 @@ public:
 		                                 const std::vector<std::vector<int>> & vGridPointIdx,
 	                                     const int & iQueryIdx);
 
-	static bool TSP::ComputeCentersPosition(pcl::PointXYZ & oCenter,
+	static bool OP::ComputeCentersPosition(pcl::PointXYZ & oCenter,
 		const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 		const std::vector<std::vector<int>> & vGridPointIdx,
 		const int & iQueryIdx);
@@ -53,8 +53,17 @@ public:
 		                    const int & vTargetIdx,
 		                    const pcl::PointXYZ & oTargetCenter);
 
+	float ObjectiveFunction(const std::vector<CofidenceValue> & vReWardMap,
+		                                             const int & vQueryIdx,
+		                                const pcl::PointXYZ & oQueryCenter,
+		                                            const int & vTargetIdx,
+		                               const pcl::PointXYZ & oTargetCenter);
+
 	//GTR methods which proposed in  
 	bool GTR(const std::vector<CofidenceValue> & vReWardMap);
+
+	//branch and bound method to solve op
+	bool BranchBoundMethod(const std::vector<CofidenceValue> & vReWardMap);
 
 	//Outout the history of traveling nodes
 	void OutputVisitedNodes(std::vector<int> & vOutputNodes);
@@ -70,7 +79,7 @@ public:
     //the corresponding center position of unvisited nodes
 	std::vector<pcl::PointXYZ> m_vUnVisitCenters;
 
-	//TSP node which has been visited
+	//OP node which has been visited
 	std::vector<int> m_vVisitedNodeIdx;
 	//std::vector<pcl::PointXYZ> vVisitedCenters;
 
@@ -79,6 +88,9 @@ private:
 	//the grid index where the current robot is  
 	int m_iCurrentNodeIdx;
 	pcl::PointXYZ m_oCurrentCenter;
+
+	//
+	BranchBound BBSolver;
 
 };
 

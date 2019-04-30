@@ -12,7 +12,7 @@
 #include "GridMap.h"
 #include "Astar.h"
 #include "GHPR.h"
-#include "TSP.h"
+#include "OP.h"
 
 #include <iostream>
 #include <fstream>
@@ -179,7 +179,62 @@ void GetGridVisiblePIdx(std::vector<std::vector<int>> & vGVTravelPsIdx,
 
 };
 
+float RMSE(pcl::PointCloud<pcl::PointXYZ>::Ptr & pAllTravelCloud,
+	                std::vector<std::vector<int>> & vGridTravelIdx) {
 
+	int nonEmptyNum = 0;
+	float fTotalRMSE = 0.0;
+
+	for (int i = 0; i != vGridTravelIdx.size(); ++i) {
+	
+		pcl::PointXYZ oMeans;
+		oMeans.x = 0.0;
+		oMeans.y = 0.0;
+		oMeans.z = 0.0;
+
+		float fOneRMSE = 0.0;
+		//vGrid size
+		if (vGridTravelIdx[i].size()) {
+
+			for (int j = 0; j !=vGridTravelIdx[i].size(); ++j) {
+
+				//oMeans.x += pAllTravelCloud->points[vGridTravelIdx[i][j]].x;
+				//oMeans.y += pAllTravelCloud->points[vGridTravelIdx[i][j]].y;
+				oMeans.z += pAllTravelCloud->points[vGridTravelIdx[i][j]].z;
+
+			}//end for
+
+			//oMeans.x = oMeans.x / float(vGridTravelIdx[i].size());
+			//oMeans.y = oMeans.y / float(vGridTravelIdx[i].size());
+			oMeans.z = oMeans.z / float(vGridTravelIdx[i].size());
+			//S={[(x1-x)^2+(x2-x)^2+......(xn-x)^2]/N}^0.5
+
+			for (int j = 0; j != vGridTravelIdx[i].size(); ++j) {
+
+				//fOneRMSE  += (pow(pAllTravelCloud->points[vGridTravelIdx[i][j]].x - oMeans.x, 2.0f)
+				//          + pow(pAllTravelCloud->points[vGridTravelIdx[i][j]].y - oMeans.y, 2.0f)
+				//          + pow(pAllTravelCloud->points[vGridTravelIdx[i][j]].z - oMeans.z, 2.0f));
+				fOneRMSE += pow(pAllTravelCloud->points[vGridTravelIdx[i][j]].z - oMeans.z, 2.0f);
+					
+
+			}//end for
+
+			fOneRMSE  = fOneRMSE  / float(vGridTravelIdx[i].size());
+
+			fOneRMSE  = sqrt(fOneRMSE );
+
+			nonEmptyNum++;
+		
+		}//end if
+
+		fTotalRMSE += fOneRMSE;
+	
+	}
+
+	fTotalRMSE = fTotalRMSE / float(nonEmptyNum);
+
+	return fTotalRMSE;
+}
 
 
 int main() {
@@ -189,7 +244,7 @@ int main() {
 	//read data
 	std::vector<std::vector<double> > vRawData;
 	//read data for data file
-	ReadMatrix("scene3.txt", vRawData);
+	ReadMatrix("scene7.txt", vRawData);
 	std::cout << "Reading data completed!" << std::endl;
 
 	//all point clouds
@@ -244,6 +299,8 @@ int main() {
 		}
 	}
 	
+	
+
 	//view points
 	srand((unsigned)time(NULL));
 
@@ -283,10 +340,10 @@ int main() {
 		for(int j = 0; j != oGridMaper.m_iGridNum; ++j)
 		    vAStarMap[i].push_back(1);
 	}
-	//TSP class
-	TSP OLTSPSolver;
+	//OP class
+	OP OLTSPSolver;
 	
-
+	std::cout<<"RMSE= "<< RMSE(pAllTravelCloud, vGridTravelPsIdx)<<std::endl;
 	//**************simulated robot point*******************
 	//original view point index based on ground points
 	//int iOriViewIdx = 75000;
@@ -334,7 +391,7 @@ int main() {
 
 	//find scanning region of each node (site)
 	// while(iLoopCount != 13 && bOverFlag && fTotalMovingCost <= 300.0){
-    while(iLoopCount != 1 && bOverFlag && fTotalMovingCost <= 300.0){
+    while(bOverFlag && fTotalMovingCost <= 300.0){
 		//judgement
 		bOverFlag = false;
 	    //robot location
@@ -465,7 +522,8 @@ int main() {
 		//OLTSP calculation
 		OLTSPSolver.GetCurrentLocation(pAllTravelCloud, vGVTravelPsIdx, iRobotGridIdx);
 		OLTSPSolver.GetNewNodes(pAllTravelCloud, vGVTravelPsIdx, vNodeGridIdxs);
-		OLTSPSolver.GTR(oGridMaper.m_vReWardMap);
+		//OLTSPSolver.GTR(oGridMaper.m_vReWardMap);
+		OLTSPSolver.BranchBoundMethod(oGridMaper.m_vReWardMap);
 
 		iLoopCount = iLoopCount + 1;
 		std::cout << "loops " << iLoopCount << std::endl;
@@ -511,7 +569,7 @@ int main() {
 			for (auto &pPathPoints : vLocalPath) {
 
 				int iQueryAstarIdx = oGridMaper.ComputeGridIdx(pPathPoints->x, pPathPoints->y);
-				pcl::PointXYZ oAStarPoint = TSP::ComputeCentersPosition(pAllTravelCloud, vGVTravelPsIdx, iQueryAstarIdx);
+				pcl::PointXYZ oAStarPoint = OP::ComputeCentersPosition(pAllTravelCloud, vGVTravelPsIdx, iQueryAstarIdx);
 				pAnchors->points.push_back(oAStarPoint);
 				//vAstarTrajectory.push_back(oAStarPoint);
 			}

@@ -1,7 +1,7 @@
 #ifndef LOCALPATHOPTIMIZATION_H
 #define LOCALPATHOPTIMIZATION_H
 #include "Confidence.h"
-#include "TSP.h"
+#include "OP.h"
 #include <iostream>
 #include <fstream>
 #include <vector>

@@ -37,7 +37,7 @@ void PathOptimization::GetControlCenter(const pcl::PointCloud<pcl::PointXYZ>::Pt
 		//if this grid has points(because the query gird only has boundary points sometimes)
 		//and our input is the obstacle points
 
-		if (TSP::ComputeCentersPosition(oControlCenter, pCloud, vGridPointIdx, m_vControls[i].idx)){
+		if (OP::ComputeCentersPosition(oControlCenter, pCloud, vGridPointIdx, m_vControls[i].idx)){
 			//only record x,y
 			pcl::PointXY oPoint;
 			oPoint.x = oControlCenter.x;
