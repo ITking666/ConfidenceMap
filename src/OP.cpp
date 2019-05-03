@@ -105,19 +105,30 @@ float OP::ComputeEuclideanDis(const pcl::PointXYZ & oQueryPoint,
 
 }
 
+//check whether grid is a wide grid
+bool OP::IsWideGrid(const std::vector<CofidenceValue> & vReWardMap,
+	const int & iQueryIdx) {
+
+	if (vReWardMap[iQueryIdx].boundary == 0 &&
+		vReWardMap[iQueryIdx].visibility.value == 1)
+		return true;
+
+	return false;
+
+}
 
 
 void OP::GetNewNode(const std::vector<CofidenceValue> & vReWardMap,
 	                 const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
 	                 const std::vector<std::vector<int>> & vGridPointIdx,
-	                 const int & vNewNodeIdxs,
+	                 const int & vNewNodeIdx,
 					 float fSuppressionR){
 
 	float fMinDis = FLT_MAX;
 
 	//to each node
 	pcl::PointXYZ oCenterPoint
-			= ComputeCentersPosition(pCloud, vGridPointIdx, vNewNodeIdxs);
+			= ComputeCentersPosition(pCloud, vGridPointIdx, vNewNodeIdx);
 
 	//find wether the input new node is near a unvisited node
 	for(int i=0;i!=m_vUnVisitCenters.size();++i){
@@ -130,14 +141,13 @@ void OP::GetNewNode(const std::vector<CofidenceValue> & vReWardMap,
 
 	if(fMinDis > fSuppressionR){
 	   //get the grid idx of new node
-	   m_vUnVisitNodeIdx.push_back(vNewNodeIdxs);
+	   m_vUnVisitNodeIdx.push_back(vNewNodeIdx);
 	   //ger the center position of new node
 	   m_vUnVisitCenters.push_back(oCenterPoint);
+	   //label wide grid as truth
+	   bool bWideLabel = IsWideGrid(vReWardMap, vNewNodeIdx);
+	   m_vUnVisitIsWide.push_back(bWideLabel);
 
-	   if (vReWardMap[vNewNodeIdxs].boundary > m_fWideThr)
-		   m_vUnVisitedWide.push_back(true);
-	   else
-		   m_vUnVisitedWide.push_back(false);
 	}
 
 }
@@ -179,11 +189,10 @@ void OP::GetNewNodes(const std::vector<CofidenceValue> & vReWardMap,
 		        m_vUnVisitNodeIdx.push_back(vNewNodeIdxs[i]);
 		        //ger the center position of new node
 		        m_vUnVisitCenters.push_back(oCenterPoint);
+				//label wide grid as true
+				bool bWideLabel = IsWideGrid(vReWardMap, vNewNodeIdxs[i]);
+				m_vUnVisitIsWide.push_back(bWideLabel);
 
-				if (vReWardMap[vNewNodeIdxs[i]].boundary > m_fWideThr)
-					m_vUnVisitedWide.push_back(true);
-				else
-					m_vUnVisitedWide.push_back(false);
 			 }//end if
 
 		 }//end for int i = 0; i != vNewNodeIdxs.size(); ++i)
@@ -200,17 +209,18 @@ void OP::GetNewNodes(const std::vector<CofidenceValue> & vReWardMap,
 		    m_vUnVisitNodeIdx.push_back(vNewNodeIdxs[i]);
 		    //get the center position of new node
 		    m_vUnVisitCenters.push_back(oCenterPoint);
-
-			if (vReWardMap[vNewNodeIdxs[i]].boundary > m_fWideThr)
-				m_vUnVisitedWide.push_back(true);
-			else
-				m_vUnVisitedWide.push_back(false);
+			//label wide grid as true
+			bool bWideLabel = IsWideGrid(vReWardMap, vNewNodeIdxs[i]);
+			m_vUnVisitIsWide.push_back(bWideLabel);
 	
 	    }//end for int i = 0; i != vNewNodeIdxs.size()
 
 	}//end else
 
 }
+
+
+
 
 //refresh the nodes
 bool OP::RefreshNodes(std::vector<CofidenceValue> & vReWardMap,
@@ -237,50 +247,50 @@ bool OP::RefreshNodes(std::vector<CofidenceValue> & vReWardMap,
 			//save the selected one
 			vNewPlan.push_back(m_vUnVisitNodeIdx[i]);
 			vNewPlanCenters.push_back(m_vUnVisitCenters[i]);
-			vNewPlanWides.push_back(m_vUnVisitedWide[i]);
+			bool bNewWideRes = IsWideGrid(vReWardMap, m_vUnVisitNodeIdx[i]);
+			vNewPlanWides.push_back(bNewWideRes);
 		}
 	}
 
 	//clear old unvisted node
 	m_vUnVisitNodeIdx.clear();
 	m_vUnVisitCenters.clear();
-	m_vUnVisitedWide.clear();
+	m_vUnVisitIsWide.clear();
 	m_vUnVisitNodeIdx.resize(vNewPlan.size());
 	m_vUnVisitCenters.resize(vNewPlanCenters.size());
-	m_vUnVisitedWide.resize(vNewPlanWides.size());
+	m_vUnVisitIsWide.resize(vNewPlanWides.size());
 	//save new unvisited node
 	//the traversing order is based on the serial number
 	for (int i = 0; i != vNewPlan.size(); ++i) {
 		m_vUnVisitNodeIdx[i] = vNewPlan[i];
 		m_vUnVisitCenters[i] = vNewPlanCenters[i];
-		m_vUnVisitedWide[i] = vNewPlanWides[i];
+		m_vUnVisitIsWide[i] = vNewPlanWides[i];
 	}
 
-
 	//wide node number
-	int iNoWideNum = 0;
+	int iWideNodeNum = 0;
 	//check whether there is still node in wide area
 	//start from the next view point
-	for (int i = 1; i < m_vUnVisitedWide.size(); ++i) {
+	for (int i = 1; i < m_vUnVisitIsWide.size(); ++i) {
 		//if the node area is wide and it still need to be explored
-		if (!m_vUnVisitedWide[i])
-			iNoWideNum++;
+		if (m_vUnVisitIsWide[i])
+			iWideNodeNum++;
 	}
 
 	//if there is still wide area
-	std::cout << "remain nowide node num: " << iNoWideNum << std::endl;
-	if (iNoWideNum)
-		return false;
-	else
+	std::cout << "****remain wide node number: " << iWideNodeNum << std::endl;
+	if (iWideNodeNum)
 		return true;
+	else
+		return false;
 
 }
 
 
 float OP::CostFunction(const std::vector<CofidenceValue> & vReWardMap,
-	      const int & vQueryIdx,
+	      const int & iQueryIdx,
 	      const pcl::PointXYZ & oQueryCenter,
-	      const int & vTargetIdx,
+	      const int & iTargetIdx,
           const pcl::PointXYZ & oTargetCenter){
 
 	//define 
@@ -289,6 +299,8 @@ float OP::CostFunction(const std::vector<CofidenceValue> & vReWardMap,
 	//compute the final cost based on the cost and reward
 	fFinalCost = ComputeEuclideanDis(oQueryCenter, oTargetCenter);
 
+	if(IsWideGrid(vReWardMap, iTargetIdx))
+		fFinalCost = 0.5 * fFinalCost;
 	//
 	return fFinalCost;
 
@@ -296,20 +308,23 @@ float OP::CostFunction(const std::vector<CofidenceValue> & vReWardMap,
 
 
 float OP::ObjectiveFunction(const std::vector<CofidenceValue> & vReWardMap,
-	                    const int & vQueryIdx,
+	                    const int & iQueryIdx,
 	                    const pcl::PointXYZ & oQueryCenter,
-	                    const int & vTargetIdx,
+	                    const int & iTargetIdx,
 	                    const pcl::PointXYZ & oTargetCenter) {
 
 	//define 
 	//compute the final cost based on the cost and reward
 	float fFinalCost = ComputeEuclideanDis(oQueryCenter, oTargetCenter);
 
-	float fFinalReward = 1.0 - vReWardMap[vTargetIdx].totalValue;
+	float fFinalReward = 1.0 - vReWardMap[iTargetIdx].totalValue;
 	
 	float fObjectVal = FLT_MAX;
 	if (fFinalReward > 0.0)
 		fObjectVal = fFinalCost / fFinalReward;
+
+	if (IsWideGrid(vReWardMap, iTargetIdx))
+		fObjectVal = 0.6666666*fObjectVal;
 
 	//return result
 	return fObjectVal;
@@ -370,9 +385,9 @@ bool OP::GTR(const std::vector<CofidenceValue> & vReWardMap) {
 			   oTargetCenter = m_vUnVisitCenters[i];
 
 			   //cost function which considers the reward and cost of node
-		       float fPairCost = CostFunction(vReWardMap,iQueryIdx,oQueryCenter,
-				                                     iTargetIdx,oTargetCenter);
-			   
+			   float fPairCost = ObjectiveFunction(vReWardMap, iQueryIdx, oQueryCenter,
+				                                              iTargetIdx,oTargetCenter);
+		  
 		       //find the shorest route
 		       if (fPairCost < fMinCost) {
 			       fMinCost = fPairCost;
@@ -392,7 +407,7 @@ bool OP::GTR(const std::vector<CofidenceValue> & vReWardMap) {
 	    //save the selected one
 	    vNewPlan.push_back(iQueryIdx);
 	    vNewPlanCenters.push_back(oQueryCenter);
-		vNewPlanWides.push_back(m_vUnVisitedWide[iMinIdx]);
+		vNewPlanWides.push_back(m_vUnVisitIsWide[iMinIdx]);
 
 		//label the selected node in unvisited nodes
 	    vUnVisitedStatus[iMinIdx] = false;
@@ -404,17 +419,17 @@ bool OP::GTR(const std::vector<CofidenceValue> & vReWardMap) {
 	//clear old unvisted node
 	m_vUnVisitNodeIdx.clear();
 	m_vUnVisitCenters.clear();
-	m_vUnVisitedWide.clear();
+	m_vUnVisitIsWide.clear();
 	m_vUnVisitNodeIdx.resize(vNewPlan.size());
 	m_vUnVisitCenters.resize(vNewPlanCenters.size());
-	m_vUnVisitedWide.resize(vNewPlanWides.size());
+	m_vUnVisitIsWide.resize(vNewPlanWides.size());
 	//save new unvisited node
 	//the traversing order is based on the serial number
 	
 	for (int i = 0; i != vNewPlan.size(); ++i){
 		m_vUnVisitNodeIdx[i] = vNewPlan[i];
 		m_vUnVisitCenters[i] = vNewPlanCenters[i];
-		m_vUnVisitedWide[i] = vNewPlanWides[i];
+		m_vUnVisitIsWide[i] = vNewPlanWides[i];
 	}
 
 	return false;
@@ -493,26 +508,27 @@ bool OP::BranchBoundMethod(const std::vector<CofidenceValue> & vReWardMap) {
 		//save the selected one
 		vNewPlan.push_back(iNodeIdx);
 		vNewPlanCenters.push_back(oNodeCenter);
-		vNewPlanWides.push_back(m_vUnVisitedWide[iBBNodeidx]);
+		vNewPlanWides.push_back(m_vUnVisitIsWide[iBBNodeidx]);
 
-		std::cout << iNodeIdx << " with "<<vReWardMap[iNodeIdx].boundary << " -> " << std::endl;
+		std::cout << iNodeIdx << " with bound "<< vReWardMap[iNodeIdx].boundary << " and visible "
+			      << vReWardMap[iNodeIdx].visibility.value << " -> ";
 	}
 
 	std::cout << std::endl;
 	 //clear old unvisted node
 	m_vUnVisitNodeIdx.clear();
 	m_vUnVisitCenters.clear();
-	m_vUnVisitedWide.clear();
+	m_vUnVisitIsWide.clear();
 	m_vUnVisitNodeIdx.resize(vNewPlan.size());
 	m_vUnVisitCenters.resize(vNewPlanCenters.size());
-	m_vUnVisitedWide.resize(vNewPlanWides.size());
+	m_vUnVisitIsWide.resize(vNewPlanWides.size());
 	//save new unvisited node
 	//the traversing order is based on the serial number
 	//new plan of nodes
 	for (int i = 0; i != vNewPlan.size(); ++i) {
 		m_vUnVisitNodeIdx[i] = vNewPlan[i];
 		m_vUnVisitCenters[i] = vNewPlanCenters[i];
-		m_vUnVisitedWide[i] = vNewPlanWides[i];
+		m_vUnVisitIsWide[i] = vNewPlanWides[i];
 	}
 
 	return false;

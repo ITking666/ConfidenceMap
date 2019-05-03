@@ -16,6 +16,9 @@ public:
 		                    const std::vector<std::vector<int>> & vGridPointIdx,
 		                    const int & iRobot);
 
+	bool IsWideGrid(const std::vector<CofidenceValue> & vReWardMap,
+		                                     const int & iQueryIdx);
+
 	//get the newly generated nodes
 	void GetNewNode(const std::vector<CofidenceValue> & vReWardMap,
 		            const pcl::PointCloud<pcl::PointXYZ>::Ptr & pCloud,
@@ -81,7 +84,7 @@ public:
 
 	//unvisited nodes or nodes to be visited
 	std::vector<int> m_vUnVisitNodeIdx;
-	std::vector<bool> m_vUnVisitedWide;
+	std::vector<bool> m_vUnVisitIsWide;
 
     //the corresponding center position of unvisited nodes
 	std::vector<pcl::PointXYZ> m_vUnVisitCenters;

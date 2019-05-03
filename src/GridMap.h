@@ -6,6 +6,22 @@
 #include <pcl/point_types.h>
 #include <pcl/kdtree/impl/kdtree_flann.hpp>
 #define ROBOT_AFFECTDIS 10.00
+
+//
+struct Visible{
+
+	float visibletimes;
+	float totaltimes;
+	float value;
+
+	Visible(){
+		visibletimes = 0.0;
+		totaltimes = 0.0;
+		value = 0.0;
+	}
+};
+
+
 //*****************************
 //
 //confidence Value
@@ -14,7 +30,7 @@
 struct CofidenceValue {
 
 	//visibility based term
-	float visibility;
+	Visible visibility;
 
 	//boundary based term
 	float boundary;
@@ -55,7 +71,6 @@ struct CofidenceValue {
 	//constructor
 	CofidenceValue() {
 
-		visibility = 1.0;
 		disTermVal = 0.0;
 		boundary = 0.0;
 		totalValue = 0.0;

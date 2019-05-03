@@ -165,7 +165,7 @@ private:
 	const float m_fWeightVis;
 
 	//weighted of each term for total confidence value
-	const float m_fLenWeight;
+	const float m_fLengthWeight;
 	const float m_fBoundWeight;
 
 	//the searched radius of a query point in density estimation

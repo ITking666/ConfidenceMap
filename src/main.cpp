@@ -390,7 +390,7 @@ int main() {
 	float fTotalMovingCost = 0.0;
 
 	//find scanning region of each node (site)
-	// while(iLoopCount != 13 && bOverFlag && fTotalMovingCost <= 300.0){
+	//while(iLoopCount != 4 && bOverFlag && fTotalMovingCost <= 300.0){
     while(bOverFlag && fTotalMovingCost <= 300.0){
 		//judgement
 		bOverFlag = false;
@@ -427,7 +427,9 @@ int main() {
 		GHPR oGHPRer(3.8);
 		
 		//compute the visibility of point clouds
-		std::vector<int> vVisableIdx = oGHPRer.ComputeVisibility(*pScanCloud, oRobot);
+		std::vector<int> vVisableIdx;
+		std::vector<int> vOccableIdx; 
+		oGHPRer.ComputeVisibility(vVisableIdx, vOccableIdx, *pScanCloud, oRobot);
 	
 		//record the scanning
 		RecordScanLabel(vObstacleScan, vTravelScan, vBoundScan,
@@ -524,9 +526,9 @@ int main() {
 		OLTSPSolver.GetNewNodes(oGridMaper.m_vReWardMap, pAllTravelCloud, vGVTravelPsIdx, vNodeGridIdxs);
 
 		if(OLTSPSolver.RefreshNodes(oGridMaper.m_vReWardMap))
-			OLTSPSolver.BranchBoundMethod(oGridMaper.m_vReWardMap);
-		else
 			OLTSPSolver.GTR(oGridMaper.m_vReWardMap);
+		else
+			OLTSPSolver.BranchBoundMethod(oGridMaper.m_vReWardMap);
 
 		iLoopCount = iLoopCount + 1;
 		std::cout << "loops " << iLoopCount << std::endl;
@@ -632,7 +634,7 @@ int main() {
 					            	<< pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].y << " "
 					            	<< pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].z << " "
 						            << oGridMaper.m_vReWardMap[i].disTermVal << " "
-						            << oGridMaper.m_vReWardMap[i].visibility << " "
+						            << oGridMaper.m_vReWardMap[i].visibility.value << " "
 						            << oGridMaper.m_vReWardMap[i].quality << " "
 						            << oGridMaper.m_vReWardMap[i].totalValue << " "
 						            << std::endl;
@@ -649,7 +651,7 @@ int main() {
 						          << pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].y << " "
 						          << pAllCloud->points[vAllTravelIdx[vGVTravelPsIdx[i][j]]].z << " "
 						<< oGridMaper.m_vReWardMap[i].disTermVal << " "
-						<< oGridMaper.m_vReWardMap[i].visibility << " "
+						<< oGridMaper.m_vReWardMap[i].visibility.value << " "
 						<< oGridMaper.m_vReWardMap[i].quality << " "
 						<< oGridMaper.m_vReWardMap[i].totalValue << " "
 						<< std::endl;
@@ -665,7 +667,7 @@ int main() {
 					          << pAllCloud->points[vAllBoundIdx[vGVBoundPsIdx[i][j]]].y << " "
 					          << pAllCloud->points[vAllBoundIdx[vGVBoundPsIdx[i][j]]].z << " "
 					          << oGridMaper.m_vReWardMap[i].disTermVal << " "
-					<< oGridMaper.m_vReWardMap[i].visibility << " "
+					<< oGridMaper.m_vReWardMap[i].visibility.value << " "
 					<< oGridMaper.m_vReWardMap[i].quality << " "
 					<< oGridMaper.m_vReWardMap[i].totalValue << " "
 					<< std::endl;
@@ -680,7 +682,7 @@ int main() {
 					<< pAllCloud->points[vAllObstacleIdx[vGVObsPsIdx[i][j]]].y << " "
 					<< pAllCloud->points[vAllObstacleIdx[vGVObsPsIdx[i][j]]].z << " "
 					<< oGridMaper.m_vReWardMap[i].disTermVal << " "
-					<< oGridMaper.m_vReWardMap[i].visibility << " "
+					<< oGridMaper.m_vReWardMap[i].visibility.value << " "
 					<< oGridMaper.m_vReWardMap[i].quality << " "
 					<< oGridMaper.m_vReWardMap[i].totalValue << " "
 					<< std::endl;

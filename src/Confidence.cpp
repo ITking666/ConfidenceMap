@@ -16,10 +16,10 @@ Others: none
 Confidence::Confidence(float f_fSigma,
 	                   float f_fGHPRParam,
 	                  float f_fVisTermThr):
-	                     m_fWeightDis(0.7),
-                         m_fWeightVis(0.3),
+	                     m_fWeightDis(0.9),
+                         m_fWeightVis(0.1),
 	                      m_fDensityR(0.3),
-                         m_fLenWeight(0.3),
+                       m_fLengthWeight(0.3),
                        m_fBoundWeight(0.7){
 
 	SetSigmaValue(f_fSigma);
@@ -552,10 +552,10 @@ Return: a vector saves distance value of each neighboring grid
 Others: none
 *************************************************/
 void Confidence::DistanceTerm(std::vector<CofidenceValue> & vReWardMap,
-	                                               const pcl::PointXYZ & oRobotPoint,
-	                                         const std::vector<int> & vNeighborGrids,
-	                                                const PCLCloudXYZ & vTravelCloud,
-	                          const std::vector<std::vector<int>> & vGridTravelPsIdx){
+	                                 const pcl::PointXYZ & oRobotPoint,
+	                           const std::vector<int> & vNeighborGrids,
+	                                  const PCLCloudXYZ & vTravelCloud,
+	            const std::vector<std::vector<int>> & vGridTravelPsIdx){
 
 	//**********Measurement item************
 	//intermediate variables
@@ -788,14 +788,14 @@ void Confidence::DisBoundTerm(std::vector<CofidenceValue> & vReWardMap,
 		if (vReWardMap[vNeighborGrids[i]].iLabel == 2) {
 			//get maximum value of distance term  
 
-			if (vReWardMap[vNeighborGrids[i]].disTermVal < (m_fLenWeight * vDisPartValue[i] + m_fBoundWeight * vBoundPartValue[i]))
-				vReWardMap[vNeighborGrids[i]].disTermVal = (m_fLenWeight * vDisPartValue[i] + m_fBoundWeight * vBoundPartValue[i]);
+			if (vReWardMap[vNeighborGrids[i]].disTermVal < vDisPartValue[i])
+				vReWardMap[vNeighborGrids[i]].disTermVal = vDisPartValue[i];
 			//record boundary grids
 			if (vReWardMap[vNeighborGrids[i]].boundary < vBoundPartValue[i])
 				vReWardMap[vNeighborGrids[i]].boundary = vBoundPartValue[i];
-		}
+		}//end if i != vNeighborGrids.size()
 
-	}
+	}//end for
 
 }
 /*************************************************
@@ -1010,18 +1010,23 @@ void Confidence::OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
 		std::vector<bool> vNearGridOccValue(vNeighborGrids.size(), false);///<distance weight part 
 
 	    //compute the visibility based on the history of view points
-		std::vector<int> vVisableIdx = oGHPRer.ComputeVisibility(*pOccCloud, vHistoryViewPoints[i]);
-	
+		std::vector<int> vVisableIdxs;
+		std::vector<int> vOccludedIdxs;
+		oGHPRer.ComputeVisibility(vVisableIdxs, vOccludedIdxs, *pOccCloud, vHistoryViewPoints[i]);
+
 		//std::stringstream teststream;
-		//teststream << RECORDNUM <<"_"<<i<< "Res.txt";
+		//teststream << vHistoryViewPoints[i].x << "OccRes.txt";
 		//std::cout << teststream.str() <<" point size:  " << pOccCloud->points.size() << std::endl;
 		//std::string testfilename;
 		//teststream >> testfilename;
 		//std::ofstream oCloudOutFile;
 		//oCloudOutFile.open(testfilename.c_str(), std::ios::out | std::ios::app);
 		//std::vector<int> vRes(pOccCloud->points.size(),0);
-		//for (int i = 0; i != vVisableIdx.size(); ++i)
-		//	vRes[vVisableIdx[i]] = 1;
+		//for (int j = 0; j != vVisableIdxs.size(); ++j) {
+		//	vRes[vVisableIdxs[j]] = 1;
+		//}
+		//for (int i = 0; i != vOccludedIdxs.size(); ++i)
+		//	vRes[vOccludedIdxs[i]] = 2;
 
 		//for (int i=0;i!= pOccCloud->points.size();++i){
 		////record the data in txt file for test
@@ -1038,22 +1043,26 @@ void Confidence::OcclusionTerm(std::vector<CofidenceValue> & vReWardMap,
 		//	<< std::endl;
 
 		//visibility result assignment 
-		for (int j = 0; j != vVisableIdx.size(); ++j){
+		for (int j = 0; j != vVisableIdxs.size(); ++j){
 		
 		    //if it is in a travelable region 
-			if (vVisableIdx[j] < vTravelPointBelongIdx.size()) {
-				vNearGridOccValue[vTravelPointBelongIdx[vVisableIdx[j]]] = true;
+			if (vVisableIdxs[j] < vTravelPointBelongIdx.size()) {
+				vNearGridOccValue[vTravelPointBelongIdx[vVisableIdxs[j]]] = true;
 			}
 		
 		}
 	
 	    //**********Incremental item************
 	    //fv(p) = fv(n)  
-	    for (int i = 0; i != vNeighborGrids.size(); ++i){
-		     //get maximum value of distance term
-			 if(vNearGridOccValue[i])
-			    vReWardMap[vNeighborGrids[i]].visibility += 1.0;
-
+	    for (int j = 0; j != vNeighborGrids.size(); ++j){
+			//r
+			vReWardMap[vNeighborGrids[j]].visibility.totaltimes++;
+		    //get maximum value of distance term
+			if(vNearGridOccValue[j])
+			   vReWardMap[vNeighborGrids[j]].visibility.visibletimes += 1.0;
+			
+			 vReWardMap[vNeighborGrids[j]].visibility.value = vReWardMap[vNeighborGrids[j]].visibility.visibletimes /
+				 vReWardMap[vNeighborGrids[j]].visibility.totaltimes;
 	    }
 
 	}//end for (int i = 0; i != vHistoryViewPoints.size(); ++i) 
@@ -1190,8 +1199,9 @@ void Confidence::ComputeTotalCoffidence(std::vector<CofidenceValue> & vReWardMap
 		if (vReWardMap[iQueryIdx].iLabel == 2) {
 			//the grid is known
 			if (vReWardMap[iQueryIdx].bKnownFlag)
-				vReWardMap[iQueryIdx].totalValue = m_fWeightDis * vReWardMap[iQueryIdx].disTermVal
-				+ m_fWeightVis * LinearKernel(vReWardMap[iQueryIdx].visibility, m_fVisTermThr);
+				vReWardMap[iQueryIdx].totalValue = m_fWeightDis * m_fLengthWeight * vReWardMap[iQueryIdx].disTermVal
+					                             + m_fWeightDis * m_fBoundWeight * vReWardMap[iQueryIdx].boundary
+				                                 + m_fWeightVis * vReWardMap[iQueryIdx].visibility.value;
 			
 		}//end if vReWardMap[iQueryIdx].iLabel == 2
 	}//end for i = 0

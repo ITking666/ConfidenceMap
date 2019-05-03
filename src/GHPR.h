@@ -46,11 +46,14 @@ public:
 		                      const float & fPointNorm);
 
 	//compute the visiable point cloud set based on the input viewpoint
-	std::vector<int> ComputeVisibility(const pcl::PointCloud<pcl::PointXYZ> & vCloud,
-		                                            const pcl::PointXYZ & oViewPoint);
+	void ComputeVisibility(std::vector<int> & vVisiableIdxs,
+		                   std::vector<int> & vOccludedIdxs,
+		                   const pcl::PointCloud<pcl::PointXYZ> & vCloud,
+		                   const pcl::PointXYZ & oViewPoint);
 
 	//find the indices of convex hull
 	void FindVisibleIndices(std::vector<int> & vVisibleIndices,
+		                    std::vector<int> & vOccludedIndices,
 		                    const pcl::PointCloud<pcl::PointXYZ>::Ptr & pTransforCloud,
 		                    const pcl::PointCloud<pcl::PointXYZ>::Ptr & pHullCloud);
 
