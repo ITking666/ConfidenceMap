@@ -244,7 +244,7 @@ int main() {
 	//read data
 	std::vector<std::vector<double> > vRawData;
 	//read data for data file
-	ReadMatrix("scene7.txt", vRawData);
+	ReadMatrix("scene1.txt", vRawData);
 	std::cout << "Reading data completed!" << std::endl;
 
 	//all point clouds
